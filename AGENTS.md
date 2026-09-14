@@ -14,6 +14,19 @@ OrangeCat linking is optional. Execution access is defined in
 `src/lib/execution-access.ts`; project identity is not a terminal tab name.
 A queued run or successful agent turn does not prove a deployment.
 
+**Loki builds software. It does not make video, music or prose.** That
+neighbour capability lives on OrangeCat (its Studio), and what it can do is
+stated once in `src/config/ecosystem.ts` → `ORANGECAT_CAPABILITIES`, which
+Loki's capability preface reads verbatim. Do not restate it in prose anywhere
+else, and do not let any surface imply Loki renders media itself — it points at
+where that happens.
+
+Two different things are called "studio" around here, so always qualify:
+**OrangeCat's Studio** is that media surface, while **the studio map** in this
+repo's own comments means the fleet overview (`fleetMapFacts`, published by
+`/api/fleet/map`). The prompt only ever sees the latter labelled "Fleet map",
+which is what keeps the model from confusing them — keep it that way.
+
 ## Where code lives
 
 Every repository Loki creates or registers lives in the `bitbaum` GitHub

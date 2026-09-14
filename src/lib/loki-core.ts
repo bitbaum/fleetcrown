@@ -42,11 +42,27 @@ import { rateLimitMessage } from "@/lib/agent/groq-error";
 import { checkAiBudget, recordAiSpend } from "@/lib/ai-budget/gate";
 import type { Fact } from "@bitbaum/ai-kit/grounding";
 import { APP_NAME } from "@/config/brand";
+import { ECOSYSTEM, ORANGECAT_CAPABILITIES } from "@/config/ecosystem";
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
 
 const LOKI_SYSTEM_PROMPT =
   `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over a builder's fleet of AI agents and projects. ` +
   `When fleet context about the operator's projects is provided, treat it as current ground truth and answer specifically and accurately from it; if a question falls outside it, say so rather than inventing detail. Be concise and direct.`;
+
+/**
+ * What the NEIGHBOURING product can do, and the line Loki must not cross.
+ *
+ * Added when OrangeCat shipped its Studio: an operator asking "can I make a
+ * trailer for this project?" was being told no, which was wrong — and the
+ * tempting fix (letting Loki sound capable) is exactly the failure the preface
+ * below exists to prevent. So the facts come from the ecosystem SSOT and the
+ * boundary is stated in the same breath.
+ */
+const NEIGHBOUR_CAPABILITIES = [
+  `NEIGHBOURING PRODUCT — ${ECOSYSTEM.orangeCat.title}, the operator's economic layer. These are ITS capabilities, not yours:`,
+  ...ORANGECAT_CAPABILITIES.lines.map((line) => `- ${line}`),
+  `You cannot render, compose or publish any of it yourself. When the operator wants to MAKE something rather than build software, point them at ${ORANGECAT_CAPABILITIES.studioUrl} and say plainly that it happens there, not here.`,
+].join("\n");
 
 /**
  * Ground-truth of what Loki can actually DO, injected into every fallback
@@ -59,7 +75,9 @@ const LOKI_SYSTEM_PROMPT =
  * This exists because Loki once told the operator a "security sandbox hard-blocked"
  * a calendar write and invented an Approve button that would book it — both false.
  */
-const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You answer from the operator's Loki records (projects, agent runs, visitor feedback, approvals, people, goals, habits, commitments, notes). You have NO ability to send messages or emails. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.`;
+const LOKI_CAPABILITIES = `CAPABILITIES — ground truth; never exceed or invent beyond this: You answer from the operator's Loki records (projects, agent runs, visitor feedback, approvals, people, goals, habits, commitments, notes). You have NO ability to send messages or emails. You cannot change Google Calendar yourself. Your only lever is the ${APP_NAME} approval queue — you PROPOSE actions and the operator must approve each one. Never claim a "security sandbox" blocked you, and never report a result (an event booked, a message sent) you did not receive confirmation of. If you cannot do something, say so plainly.
+
+${NEIGHBOUR_CAPABILITIES}`;
 
 function voiceClause(voice: string | null | undefined): string {
   const v = voice?.trim();

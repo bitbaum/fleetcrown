@@ -76,3 +76,24 @@ export const ORANGECAT_INTEGRATION = {
   relation: "Loki is a customer of OrangeCat through the shared entity graph.",
   note: "OrangeCat is the public funding layer; Loki is the building layer.",
 } as const;
+
+/**
+ * What OrangeCat can do for a Loki operator, in one place.
+ *
+ * SSOT because two very different consumers say it and must not disagree: the
+ * handoff/publish surfaces in `src/components/integrations`, and Loki's
+ * capability preface (`src/lib/loki-core.ts`), which is a grounding contract —
+ * Loki has been wrong about what a neighbouring system can do before, and the
+ * fix each time was to bind it to a fact rather than to prose.
+ *
+ * NOTE THE BOUNDARY. These are OrangeCat's capabilities, not Loki's. Loki
+ * cannot render a video; it can tell the operator where one gets rendered.
+ */
+export const ORANGECAT_CAPABILITIES = {
+  studioUrl: orangeCatPage("/studio"),
+  lines: [
+    'OrangeCat has a Studio that renders video, music, longform writing and artwork, and revises it from plain-language notes ("the middle drags", "colder light") rather than settings.',
+    "Video, music and artwork there run on the operator's own AI provider key; writing runs on OrangeCat's free models.",
+    "Work still being made is financed on OrangeCat as a project; finished work is sold as a product, settled in Bitcoin with no platform cut.",
+  ],
+} as const;
