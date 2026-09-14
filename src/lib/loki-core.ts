@@ -44,6 +44,7 @@ import type { Fact } from "@bitbaum/ai-kit/grounding";
 import { APP_NAME } from "@/config/brand";
 import { ECOSYSTEM, ORANGECAT_CAPABILITIES } from "@/config/ecosystem";
 import { HTTP_TIMEOUT_LONG_MS } from "@/lib/constants/time";
+import { looksLikePlan, ANSWER_ONLY } from "@/lib/loki/plan-as-answer";
 
 const LOKI_SYSTEM_PROMPT =
   `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over a builder's fleet of AI agents and projects. ` +
@@ -107,24 +108,40 @@ async function callGroq(
   voice: string | null,
   onEvent?: (event: LokiTurnEvent) => void,
 ): Promise<{ text: string; model: string }> {
-  const text = await callGroqText(message, {
-    systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
-    maxTokens: 1024,
-    timeoutMs: HTTP_TIMEOUT_LONG_MS,
-    // The fallback streams too. It is tempting to treat this path as "degraded,
-    // so it can be silent" — but it is the path that runs precisely when the
-    // free tiers are drained and the tool loop cannot start, which is to say on
-    // the slowest days. Leaving it unstreamed meant the operator saw no
-    // streaming at all exactly when they most needed to see progress.
-    ...(onEvent
-      ? {
-          sink: {
-            delta: (text: string) => onEvent({ type: "delta", text }),
-            reset: () => onEvent({ type: "reset" }),
-          },
-        }
-      : {}),
-  });
+  const ask = (prompt: string) =>
+    callGroqText(prompt, {
+      systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
+      // A chat turn with the whole fleet in context needs room, and the model
+      // must be allowed to think in its HIDDEN channel rather than out loud in
+      // the answer: at "low" effort gpt-oss narrated its plan into the reply
+      // and ran out of tokens before answering. Raised together, as groq.ts
+      // documents — effort spends from the same budget.
+      maxTokens: 2048,
+      reasoningEffort: "medium",
+      timeoutMs: HTTP_TIMEOUT_LONG_MS,
+      // The fallback streams too. It is tempting to treat this path as "degraded,
+      // so it can be silent" — but it is the path that runs precisely when the
+      // free tiers are drained and the tool loop cannot start, which is to say on
+      // the slowest days. Leaving it unstreamed meant the operator saw no
+      // streaming at all exactly when they most needed to see progress.
+      ...(onEvent
+        ? {
+            sink: {
+              delta: (text: string) => onEvent({ type: "delta", text }),
+              reset: () => onEvent({ type: "reset" }),
+            },
+          }
+        : {}),
+    });
+  let text = await ask(message);
+  if (looksLikePlan(text)) {
+    // One retry, with the instruction the first attempt showed it needed. The
+    // reset event clears what was streamed so the operator does not keep the
+    // plan on screen above the answer.
+    onEvent?.({ type: "reset" });
+    console.warn("[loki] groq fallback returned a plan instead of an answer — retrying once");
+    text = await ask(message + ANSWER_ONLY);
+  }
   return { text, model: `groq/${GROQ_FAST_MODEL}` };
 }
 
