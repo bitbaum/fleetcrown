@@ -212,10 +212,15 @@ reset_log; "$MON/github-security-check.sh" >/dev/null 2>&1
 "$MON/github-security-check.sh" >/dev/null 2>&1
 [ "$(wc -l < "$ALERT_LOG")" -eq 0 ] && ok "steady state is silent" || bad "steady state alerted"
 
-echo '[{"number":7,"secret_type_display_name":"Stripe Live Key","html_url":"https://x/7"}]' > "$GH_DIR/repos_testorg_site_secret-scanning_alerts.json"
+echo '[{"number":7,"secret_type_display_name":"Stripe Live Key"},{"number":8,"secret_type_display_name":"Stripe Live Key"},{"number":9,"secret_type_display_name":"Mailgun API Key"}]' > "$GH_DIR/repos_testorg_site_secret-scanning_alerts.json"
 rm -f "$GH_DIR/repos_testorg_vault_secret-scanning_alerts.json"   # vault: scanning unavailable → 404 → skipped, not "empty"
+# A fork carrying upstream's fixture secrets (100 of them) must not be read at all.
+echo '[{"name":"site","private":false,"archived":false,"security_and_analysis":{"secret_scanning":{"status":"enabled"}}},{"name":"vault","private":true,"archived":false,"security_and_analysis":{"secret_scanning":{"status":"disabled"}}},{"name":"upstreamfork","private":false,"archived":false,"fork":true,"security_and_analysis":{"secret_scanning":{"status":"enabled"}}}]' > "$GH_DIR/orgs_testorg_repos.json"
+python3 -c 'import json; print(json.dumps([{"number":i,"secret_type_display_name":"Alibaba Cloud AccessKey Secret"} for i in range(100)]))' > "$GH_DIR/repos_testorg_upstreamfork_secret-scanning_alerts.json"
+echo '[]' > "$GH_DIR/repos_testorg_upstreamfork_keys.json"
 "$MON/github-security-check.sh" >/dev/null 2>&1; "$MON/github-security-check.sh" >/dev/null 2>&1
-[ "$(count 'SECRET IN REPO: site')" -eq 1 ] && grep -q "Stripe Live Key" "$ALERT_LOG" && ok "new secret-scanning alert: one message, names repo and type" || bad "secret alert count $(count 'SECRET IN REPO')"
+[ "$(count 'SECRET(S) IN REPO')" -eq 1 ] && grep -q "3 SECRET(S) IN REPO site: Stripe Live Key×2, Mailgun API Key×1" "$ALERT_LOG" && ok "three new alerts in one repo: ONE message, counts by type" || bad "secret alert count $(count 'SECRET(S) IN REPO')"
+grep -q "IN REPO upstreamfork" "$ALERT_LOG" && bad "a fork's 100 upstream fixture alerts were paged" || ok "a fork's alerts are never read (openclaw storm, 2026-09-14)"
 
 reset_log; echo '[{"repository":{"name":"site"},"number":3,"dependency":{"package":{"name":"next"}}}]' > "$GH_DIR/orgs_testorg_dependabot_alerts.json"
 "$MON/github-security-check.sh" >/dev/null 2>&1

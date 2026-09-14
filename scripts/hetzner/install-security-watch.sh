@@ -365,17 +365,29 @@ alert_transition sec_gh ok "" ""
 # own endpoint listed three open alerts, so the org view would have stayed
 # silent forever. A repo whose alerts cannot be read (scanning unavailable on
 # the plan, no access) is noted in the journal and skipped, not treated as empty.
-if ghq repolist "orgs/$ORG/repos?per_page=100" '.[] | select(.archived==false) | .name'; then
+#
+# ONE MESSAGE PER REPO, never per alert, and forks are skipped: on 2026-09-14
+# the first per-repo version found ~100 open alerts in the openclaw FORK
+# (upstream's own test fixtures) and sent 100 Telegram messages in one run —
+# the exact storm this channel exists to prevent. A fork's alerts are the
+# upstream's problem; a repo of ours with N new alerts is one line naming N.
+if ghq repolist "orgs/$ORG/repos?per_page=100" '.[] | select(.archived==false and ((.fork // false) == false)) | .name'; then
   : > "$S/gh-secrets.cur"
   while read -r r; do
     if out=$(gh api "repos/$ORG/$r/secret-scanning/alerts?state=open&per_page=100" \
-               --jq ".[] | \"$r#\(.number)|\(.secret_type_display_name)|\(.html_url)\"" 2>/dev/null); then
+               --jq ".[] | \"$r#\(.number)|\(.secret_type_display_name)\"" 2>/dev/null); then
       printf '%s\n' "$out" | sed '/^$/d' >> "$S/gh-secrets.cur"
     else logger -t watchdog "github-security-check: secret alerts for $r unreadable (scanning off or no access)"; fi
   done < "$S/gh-repolist.cur"
-  set_diff "$S/gh-secrets" "$S/gh-secrets.cur" | while IFS='|' read -r id typ url; do
-    alert "🕵️" "SECRET IN REPO: ${id%%#*} — $typ. Rotate it at the provider, then resolve: $url"
-  done
+  set_diff "$S/gh-secrets" "$S/gh-secrets.cur" > "$S/gh-secrets.new"
+  if [ -s "$S/gh-secrets.new" ]; then
+    cut -d'#' -f1 "$S/gh-secrets.new" | sort -u | while read -r r; do
+      n=$(grep -c "^$r#" "$S/gh-secrets.new")
+      types=$(grep "^$r#" "$S/gh-secrets.new" | cut -d'|' -f2 | sort | uniq -c | sort -rn | head -3 | awk '{c=$1; $1=""; sub(/^ /,""); printf "%s×%s, ", $0, c}' | sed 's/, $//')
+      alert "🕵️" "$n SECRET(S) IN REPO $r: $types. Rotate at the provider, then resolve: https://github.com/$ORG/$r/security/secret-scanning"
+    done
+  fi
+  rm -f "$S/gh-secrets.new"
 fi
 
 # Critical dependency alerts on deployed code. High/medium stay in Dependabot;
@@ -523,6 +535,9 @@ systemctl enable --now security-check.timer github-security-check.timer >/dev/nu
 # intrusion, and the second install of the day paged "2 SENSITIVE FILE(S)
 # CHANGED: security-check.sh, github-security-check.sh" about itself.
 ALERT_DRY_RUN=1 /opt/monitoring/security-check.sh >/dev/null 2>&1 || true
-systemctl start github-security-check.service >/dev/null 2>&1 || true
+# Same for the GitHub check: when its data source changes (org endpoint →
+# per-repo, 2026-09-14) everything it now sees is "new", and the live run
+# after that install sent 100 messages. The timer's next run is live.
+ALERT_DRY_RUN=1 /opt/monitoring/github-security-check.sh >/dev/null 2>&1 || true
 echo "[security] security-check.timer + github-security-check.timer active; baselines seeded: $(ls /opt/monitoring/state/security | wc -l) state files"
 REMOTE
