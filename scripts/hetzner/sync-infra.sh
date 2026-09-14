@@ -89,6 +89,7 @@ sudo systemctl daemon-reload && sudo systemctl enable $NAME-app >/dev/null 2>&1"
     caddy_domains="${DOMAINS//,/, }"
     vhost=$(cat <<EOF
 $caddy_domains {
+  import access_log
   encode zstd gzip
   handle_path /uploads/* {
     root * /opt/$NAME/uploads

@@ -41,6 +41,24 @@ message; test runs (`ALERT_DRY_RUN=1`) never deliver.
 | Fleet refs audit findings | Deployed refs diverge from expected across the fleet | `scripts/hetzner/install-fleet-refs-audit.sh` |
 | ✗ register check findings | Daily 09:15 (laptop): committed apps.conf register vs reality — at most one message per finding per day | `scripts/local/fleet-register-check` |
 
+## Threat detection (something changed that only an operator can judge)
+
+Baselines are seeded silently on the first run; every row below fires on
+CHANGE only and ends with what to do. Blocking a web scanner is a response,
+not a message (fail2ban `caddy-scan`, journal only).
+
+| What arrives | Trigger | Source |
+|---|---|---|
+| 🧱 FIREWALL DOWN / 🛡️ GUARD DOWN / 🔓 SSHD DRIFT / ✅ RECOVERED | ufw, fail2ban or unattended-upgrades stops; sshd stops being keys-only (as `sshd -T` resolves it) | `scripts/hetzner/install-security-watch.sh` (security-check.sh, 5-min timer) |
+| 📝 N SENSITIVE FILE(S) CHANGED: a, b, c (+k more) | A file an intruder edits to persist changes hash, owner or mode: sshd/sudoers/authorized_keys/shadow/cron/PAM/ld.so.preload/Caddy/ufw/monitoring/systemd units/apt sources — one grouped message per tick | `scripts/hetzner/install-security-watch.sh` (security-check.sh) |
+| 🔌 NEW PORT OPEN TO THE INTERNET / 👤 NEW PRIVILEGED ACCOUNT / 🐳 NEW CONTAINER / 🧨 NEW SETUID BINARY | A non-loopback listener, a uid-0/shell/sudo/docker account, a container or a setuid binary appears that was not in the baseline | `scripts/hetzner/install-security-watch.sh` (security-check.sh) |
+| 🔑 SSH LOGIN as \<user\> from \<ip\> / 🚨 SSH PASSWORD LOGIN ACCEPTED | A key login from an IP never seen in 30 days of history that is not a GitHub Actions runner (api.github.com/meta, cached daily); any password login at all | `scripts/hetzner/install-security-watch.sh` (security-check.sh) |
+| ☠️ SUSPICIOUS PROCESS | A process executing from /tmp, /dev/shm or /var/tmp, or a known miner name | `scripts/hetzner/install-security-watch.sh` (security-check.sh) |
+| 🗄️ OFFSITE BACKUP STALE / UNREACHABLE / ✅ RECOVERED | Newest restic snapshot older than 30h, or restic cannot list them (hourly) | `scripts/hetzner/install-security-watch.sh` (security-check.sh) |
+| ♻️ REBOOT PENDING for N days | A kernel/security patch has waited on a reboot for more than a week (weekly at most) | `scripts/hetzner/install-security-watch.sh` (security-check.sh) |
+| 🕵️ SECRET IN REPO / 🛡️ NEW CRITICAL DEPENDENCY ALERT(S) / 🌍 REPO NOW PUBLIC / 🔍 SECRET SCANNING OFF / 🧑‍💻 NEW ACCESS TO THE ORG / 🗝️ NEW DEPLOY KEY / 🎬 ACTIONS POLICY LOOSENED / 🐙 GITHUB CHECK BLIND | Daily read of the GitHub org through the box's gh login; each fires once per new alert id, repo, member, key or policy transition. A call the token cannot make is skipped (journal), never read as a value | `scripts/hetzner/install-security-watch.sh` (github-security-check.sh, daily 07:10) |
+| 🔌 laptop: NEW PORT / 🔓 laptop: sshd is RUNNING / 🖥️ laptop: screen lock off / 🛡️ laptop: upgrades OFF / 🔑 laptop: ~/.ssh changed / 👤 laptop: NEW LOGIN ACCOUNT / 🐙 laptop: gh identity changed / ♻️ laptop: reboot pending | The operator's laptop (box SSH key, admin:org token, transcripts) every 30 min, on change only; delivered through the box's `lib-alert.sh` over SSH, desktop notification if the box is unreachable | `scripts/local/laptop-security-check` (user timer `laptop-security-check.timer`) |
+
 ## Loki self-checks (the platform watching itself)
 
 | What arrives | Trigger | Source |
