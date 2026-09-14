@@ -13,6 +13,8 @@ import { searchPeople, type PersonWithAttributes } from "@/db/queries/people";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getPendingActions } from "@/db/queries/actions";
 import { searchKnowledge, type KnowledgeHit } from "@/db/queries/knowledge-embeddings";
+import { loadFleetMap } from "@/lib/register/load-map";
+import { renderFleetMapOverview } from "@/lib/register/map";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import { cleanDescription } from "@/lib/project-display";
 import { makeFact, type Fact } from "@bitbaum/ai-kit/grounding";
@@ -228,6 +230,33 @@ export async function documentFacts(userId: string, query: string, k: number): P
       },
     });
   });
+}
+
+/** The whole studio map is one long fact; it must not be cut like a chunk. */
+const FLEET_MAP_MAX = 8000;
+
+/**
+ * The studio map as ONE fact: every project with purpose, layer, state, doors
+ * and last movement, exactly as /api/fleet/map publishes it. Deterministic —
+ * fetched whenever the question is about the fleet as a whole — because the
+ * shape of the studio is not something a similarity search should be trusted
+ * to find. Owner-scoped like the endpoint; empty for anyone else.
+ */
+export async function fleetMapFacts(): Promise<Fact[]> {
+  const map = await loadFleetMap().catch(() => null);
+  if (!map) return [];
+  return [
+    makeFact({
+      kind: "document",
+      subject: "Fleet map",
+      source: "fleet map (computed live from the register, profiles and runs)",
+      values: {
+        title: "Fleet map",
+        source: "fleet_map",
+        excerpt: renderFleetMapOverview(map).slice(0, FLEET_MAP_MAX),
+      },
+    }),
+  ];
 }
 
 /**
