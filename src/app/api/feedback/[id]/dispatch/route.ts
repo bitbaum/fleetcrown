@@ -126,18 +126,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // (blocked: user typing). status < 400 alone is not enough: inject can answer
   // 200/ok when it refused mid-keystroke or when run-create failed — marking
   // those Queued/Working is the closed-loop lie.
+  // Snapshot outcome fields BEFORE the accept type-guard — it narrows body to
+  // { runId } and TypeScript then forgets mode / hosted / nextAction.
+  const mode = typeof body.mode === "string" ? body.mode : null;
+  const hostedDispatchId =
+    typeof body.hostedDispatchId === "string" ? body.hostedDispatchId : null;
+  const nextAction = typeof body.nextAction === "string" ? body.nextAction : null;
+
   const accepted = feedbackInjectAccepted(status, body);
   const runId = accepted ? body.runId : undefined;
   if (accepted) {
     await setFeedbackStatus(userId, idOrResp, FEEDBACK_STATUS.DISPATCHED, runId);
   }
-
-  // Read outcome fields off the un-narrowed inject body — the accept guard only
-  // proves runId, and TypeScript would otherwise forget mode / hosted / nextAction.
-  const mode = typeof body.mode === "string" ? body.mode : null;
-  const hostedDispatchId =
-    typeof body.hostedDispatchId === "string" ? body.hostedDispatchId : null;
-  const nextAction = typeof body.nextAction === "string" ? body.nextAction : null;
 
   const workLabel = accepted
     ? mode === "direct"
