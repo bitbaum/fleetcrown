@@ -30,7 +30,7 @@ export function dispatchClosing(dod: string | null): string {
     dod
       ? `Definition of done: ${dod}`
       : "Verify your work before claiming done — run the relevant tests or exercise the change.",
-    "Ship it: commit on a branch, push it, and open a PR before your run ends. Work left uncommitted in the workspace does not exist.",
+    "Ship it: commit on a branch, push it, open a PR, and enable auto-merge on it (`gh pr merge --auto --squash`) before your run ends — CI is the reviewer, and a green PR merges and deploys without anyone pressing a button. Work left uncommitted in the workspace does not exist.",
     "Record what you actually did (with evidence) in your final session handoff.",
   ].join(" ");
 }

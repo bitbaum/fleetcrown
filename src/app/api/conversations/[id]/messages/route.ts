@@ -152,12 +152,17 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
           promptKey: opts.intentId!,
           adapter: opts.agent,
           model: opts.model,
+          // A person typed this: tell them how it ended, in this thread.
+          notifyOnClose: true,
+          conversationId: opts.conversationId,
         }
       : {
           tab: opts.projectKey,
           customPrompt: opts.prompt + opts.attachmentSuffix,
           adapter: opts.agent,
           model: opts.model,
+          notifyOnClose: true,
+          conversationId: opts.conversationId,
         },
     opts.userId,
   );
