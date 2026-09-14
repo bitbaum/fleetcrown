@@ -29,7 +29,7 @@ sed -n "/<<'SH'\$/,/^SH\$/p" "$SRC" | sed '1d;$d' > "$TMP/fc-cron.sh"
 
 PORT=4997
 printf 'CRON_SECRET=testsecret\n' > "$TMP/.env"
-sed -i "s#ENV_FILE=/opt/fleetcrown/app/.env#ENV_FILE=$TMP/.env#" "$TMP/fc-cron.sh"
+sed -i "s#ENV_FILE=/opt/loki/app/.env#ENV_FILE=$TMP/.env#" "$TMP/fc-cron.sh"
 sed -i "s#http://127.0.0.1:4002#http://127.0.0.1:$PORT#" "$TMP/fc-cron.sh"
 # Same retry count, a fraction of the sleep — the retry LOGIC is under test,
 # not production's ~13s deploy-restart window.
@@ -86,7 +86,7 @@ check "the runner never discards the body to /dev/null" \
 # The deploy-restart race: nothing listens on the port yet (connection
 # refused, curl exit 7) when the job starts, then the app comes up mid-retry.
 # This is the exact failure that paged the operator for check-runner-stall
-# while fleetcrown-app.service was mid-restart and self-resolved a tick later.
+# while loki-app.service was mid-restart and self-resolved a tick later.
 RETRY_PORT=4998
 sed "s#http://127.0.0.1:$PORT#http://127.0.0.1:$RETRY_PORT#" "$TMP/fc-cron.sh" > "$TMP/fc-cron-retry.sh"
 chmod +x "$TMP/fc-cron-retry.sh"

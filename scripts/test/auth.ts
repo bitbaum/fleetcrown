@@ -45,8 +45,8 @@ const CLEAN_PROD_ENV: Record<string, string> = {
   X1_CONSUMER_KEY: "x_key",
   X1_CONSUMER_SECRET: "x_sec",
   DATABASE_URL: "postgres://x",
-  NEXTAUTH_URL: "https://fleetcrown.orangecat.ch",
-  RESEND_FROM: "FleetCrown <fleetcrown@fleetcrown.orangecat.ch>",
+  NEXTAUTH_URL: "https://loki.orangecat.ch",
+  RESEND_FROM: "Loki <loki@loki.orangecat.ch>",
   GROQ_API_KEY: "gsk_test",
 };
 

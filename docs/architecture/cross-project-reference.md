@@ -1,7 +1,7 @@
 # Cross-Project Reference — spec
 
 **Status:** proposed · **Date:** 2026-06-25
-**Thesis fit:** This is the one context feature single-project tools structurally cannot have. FleetCrown's edge is that you run *many* projects; cross-project reference is where that edge becomes a feature.
+**Thesis fit:** This is the one context feature single-project tools structurally cannot have. Loki's edge is that you run *many* projects; cross-project reference is where that edge becomes a feature.
 
 ## The problem with what exists today
 

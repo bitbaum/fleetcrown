@@ -10,15 +10,15 @@ import { verifyOrangeCatWebhookSignature } from "@/lib/integrations/orangecat-we
 /**
  * OrangeCat-rail entitlement webhook — the settlement signal (scope §4a).
  *
- * When a Bitcoin payment for a FleetCrown pass settles on OrangeCat, OC POSTs
- * here signed with a shared secret. We verify, map the OC actor → FleetCrown
+ * When a Bitcoin payment for a Loki pass settles on OrangeCat, OC POSTs
+ * here signed with a shared secret. We verify, map the OC actor → Loki
  * user, and grant the plan with a time-boxed expiry (BTC has no native
  * recurring). The oc_billing_grants ledger makes it idempotent — a retried
  * webhook is a no-op — and the same updateUserBilling write the Stripe webhook
  * uses means a BTC-granted plan is identical to a card-granted one.
  *
  * Fail-closed: no shared secret configured → 503 (can't verify, so refuse).
- * The OC emitter IS built — `src/services/fleetcrown/entitlement-notify.ts` in
+ * The OC emitter IS built — `src/services/loki/entitlement-notify.ts` in
  * the orangecat repo signs and POSTs here from handlePaymentConfirmed. Both ends
  * stay inert until the shared ORANGECAT_WEBHOOK_SECRET is set on both boxes; once
  * it is, a settled BTC payment on OrangeCat grants the plan here automatically.
@@ -60,12 +60,12 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getUserByOrangeCatActorId(actorId);
     if (!user) {
-      // Payment settled on OC but no FleetCrown account links this actor yet.
+      // Payment settled on OC but no Loki account links this actor yet.
       // 200 (don't make OC retry forever) but record it so it's not silently lost.
       await logDebug({
         source: "orangecat/entitlement",
         level: "warn",
-        message: "grant for unlinked actor — no FleetCrown user",
+        message: "grant for unlinked actor — no Loki user",
         meta: { actorId, plan, externalId },
       }).catch(() => {});
       return NextResponse.json({ ok: true, granted: false, reason: "no-linked-user" });

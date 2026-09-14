@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   // always a user-owned LOCAL machine. Treat it as "local" so channel-pinned
   // dispatches (projectPreferredChannel) still reach it. The shared cloud
   // builder is provisioned by install-box-runner.sh, which has always set
-  // FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud — it never polls paramless.
+  // LOKI_RUNNER_PRESENCE_CHANNEL=cloud — it never polls paramless.
   const runnerChannel: RunnerChannel = channelParam.success ? channelParam.data : "local";
 
   // Long-poll: hold the request until a command arrives or the wait expires.

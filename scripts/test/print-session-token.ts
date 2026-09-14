@@ -8,7 +8,7 @@ import { smokeSessionToken } from "@/lib/brand-env";
 config({ path: ".env.local", quiet: true });
 config({ path: ".env.hetzner.local", quiet: true });
 
-const BASE = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const BASE = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 
 function sessionCookieName(): string {
   return BASE.startsWith("https://") ? "__Secure-authjs.session-token" : "authjs.session-token";
@@ -17,12 +17,12 @@ function sessionCookieName(): string {
 async function tryMintJwt(): Promise<string | null> {
   const secret = process.env.AUTH_SECRET?.trim();
   if (!secret) return null;
-  const hetznerPassword = process.env.FLEETCROWN_DB_PASSWORD;
+  const hetznerPassword = process.env.LOKI_DB_PASSWORD;
   const hetznerHost = process.env.HETZNER_IP;
-  const isProd = BASE.includes("fleetcrown.orangecat.ch") || BASE.includes("orangecat.ch");
+  const isProd = BASE.includes("loki.orangecat.ch") || BASE.includes("orangecat.ch");
   const dbUrl =
     isProd && hetznerPassword && hetznerHost
-      ? `postgres://fleetcrown:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/fleetcrown?sslmode=require`
+      ? `postgres://loki:${encodeURIComponent(hetznerPassword)}@${hetznerHost}:5432/loki?sslmode=require`
       : process.env.DATABASE_URL;
   if (!dbUrl) return null;
 
@@ -80,7 +80,7 @@ async function main() {
   }
   const minted = await tryMintJwt();
   if (!minted) {
-    throw new Error("No session — set FLEETCROWN_SESSION_TOKEN or AUTH_SECRET + HETZNER_IP");
+    throw new Error("No session — set LOKI_SESSION_TOKEN or AUTH_SECRET + HETZNER_IP");
   }
   process.stdout.write(minted);
 }

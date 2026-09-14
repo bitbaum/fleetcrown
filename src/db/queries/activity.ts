@@ -12,7 +12,7 @@ import { DAY_MS } from "@/lib/constants/time";
 
 /**
  * Unified per-project activity — the SSOT read-model for "what happened" on a
- * project. FleetCrown records activity across three specialized tables
+ * project. Loki records activity across three specialized tables
  * (prompt_history = dispatches, orchestration_runs = run outcomes,
  * orchestration_events = lifecycle signals). Every surface that wants "the
  * timeline" previously re-merged these ad-hoc, which is how the Control table's

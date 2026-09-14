@@ -41,7 +41,7 @@ export const config = {
      *                                account by design (see config/crew.ts)
      *   beacon                     – public beacon page
      *   api/auth                   – NextAuth internal endpoints
-     *   api/agent/install          – serves the @fleetcrown/agent CLI for curl|node install
+     *   api/agent/install          – serves the @loki/agent CLI for curl|node install
      *                                (public so new customers can run it before they sign in)
      *   api/agent/daemon           – serves the gzipped daemon-scripts tarball for the
      *                                CLI's install step (same pre-auth rationale as /install)
@@ -64,10 +64,13 @@ export const config = {
      *   import-from-local\.sh      – public bash one-liner users curl-pipe into their terminal
      *                                to scan ~/dev and POST detected repos to /api/projects/import-from-local
      *   fleet, api/fleet/register  – the public fleet register (which projects exist and where);
+     *   api/fleet/map              – the public fleet MAP (the register plus purpose, layer, state,
+     *                                last movement); bitbaum renders it, Cat reads it, the
+     *                                knowledge index embeds it — same public-by-design reason.
      *                                the bitbaum showcase and the footer derive from it, and a
      *                                register behind a session is a register with a private copy
      *                                on every consumer. api/fleet/status stays protected.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|fleet|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/fleet/register|api/invitations/|api/share/task/|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|fleet|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/fleet/register|api/fleet/map|api/invitations/|api/share/task/|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
   ],
 };

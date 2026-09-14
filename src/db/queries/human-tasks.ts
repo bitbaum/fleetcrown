@@ -478,7 +478,7 @@ export async function getSharedTask(token: string): Promise<SharedTask | null> {
     feeCurrency: row.task.feeCurrency,
     orangecatUrl: row.task.orangecatUrl,
     payToUrl: row.assigneePayUrl,
-    fromName: owner?.name || owner?.username || "FleetCrown",
+    fromName: owner?.name || owner?.username || "Loki",
     assigneeName: row.assigneeName,
     projectName: row.projectName,
     assignedAt: row.task.assignedAt,

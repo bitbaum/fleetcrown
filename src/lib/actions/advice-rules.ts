@@ -64,7 +64,7 @@ const LOW_SIGNAL_PATTERNS: RegExp[] = [
  */
 const STEERING_PATTERNS: RegExp[] = [
   /\bignore\s+(all\s+|any\s+|the\s+)?(previous|prior|above|earlier)\b/i,
-  /\b(operator|system|admin|fleetcrown)\s+(instruction|directive|note|override)/i,
+  /\b(operator|system|admin|loki)\s+(instruction|directive|note|override)/i,
   /\bdisregard\b[\s\S]{0,40}\b(instruction|rule|above|prompt)\b/i,
   /\bsafe\s+to\s+(archive|ignore|delete|dismiss|skip)\b/i,
   /\byou\s+(are|must|should|will)\s+now\b/i,

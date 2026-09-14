@@ -19,7 +19,7 @@ const ReviewBody = z.object({
   url: z.string().url().max(1000),
 });
 
-const AI_REVIEWER_CONTACT = "FleetCrown AI reviewer";
+const AI_REVIEWER_CONTACT = "Loki AI reviewer";
 
 function composeReviewPrompt(pageUrl: string, projectName: string, widgetToken: string): string {
   const ingestUrl = `${appUrl().replace(/\/$/, "")}/api/feedback`;
@@ -32,7 +32,7 @@ function composeReviewPrompt(pageUrl: string, projectName: string, widgetToken: 
     "",
     `PAGE: ${pageUrl}`,
     "",
-    "1. SEE the page. Write a throwaway Playwright script (headless chromium; playwright is a devDependency of FleetCrown — `npx playwright install chromium` if browsers are missing) that opens the page at desktop 1440x900 AND mobile 320x800 viewports, waits for network idle, saves a full-page screenshot per viewport, and captures console errors + failed network requests. Read the screenshots with your own eyes. If no headless browser can run in this environment, fall back to `curl` + static HTML review and say so in a finding.",
+    "1. SEE the page. Write a throwaway Playwright script (headless chromium; playwright is a devDependency of Loki — `npx playwright install chromium` if browsers are missing) that opens the page at desktop 1440x900 AND mobile 320x800 viewports, waits for network idle, saves a full-page screenshot per viewport, and captures console errors + failed network requests. Read the screenshots with your own eyes. If no headless browser can run in this environment, fall back to `curl` + static HTML review and say so in a finding.",
     "2. JUDGE: broken layout or horizontal overflow (especially at 320px), unreadable contrast, console errors, broken links/images, confusing or wrong copy, missing empty/loading states, anything a real visitor would trip over. Concrete defects only — no generic advice.",
     "3. FILE each finding (max 8, worst first) as its own submission:",
     "```",

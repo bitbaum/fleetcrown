@@ -8,7 +8,7 @@
 //
 // Source selection is deliberately weighted toward AGENT / LLM-ENGINEERING /
 // SOFTWARE topics (cs.MA multi-agent, cs.SE software-eng, cs.CL language, HN
-// agent/MCP queries) — that is what FleetCrown's own roadmap gaps are about, so
+// agent/MCP queries) — that is what Loki's own roadmap gaps are about, so
 // it lifts the match rate for the self-improvement proposal loop — while still
 // keeping broad AI + robotics coverage for the public digest.
 //

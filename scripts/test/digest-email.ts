@@ -1,7 +1,7 @@
 /**
  * The digest email has to survive an inbox.
  *
- * It used to ship the subject "FleetCrown daily digest" — byte-identical every
+ * It used to ship the subject "Loki daily digest" — byte-identical every
  * day — over a body that opened with the generic line "What your fleet did in
  * the last 24 hours". An inbox shows a subject and maybe a preview; a recurring
  * email whose subject never changes trains you to archive it unread however
@@ -35,7 +35,7 @@ const base = {
     "**Headline:** truthseeker timed out overnight.\n\n## Needs you\n- **truthseeker** — timed out after 1h.",
   cadenceLabel: "daily",
   windowLabel: "the last 24 hours",
-  activityUrl: "https://fleetcrown.orangecat.ch/activity",
+  activityUrl: "https://loki.orangecat.ch/activity",
 };
 
 async function main() {

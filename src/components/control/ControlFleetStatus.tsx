@@ -13,17 +13,17 @@ import { EXECUTOR_COPY } from "@/config/executor-copy";
 /**
  * What the working / awaiting-input / idle chips actually count.
  *
- * FleetCrown sees an agent when it dispatched the run itself, or when the
+ * Loki sees an agent when it dispatched the run itself, or when the
  * runner tracks a workspace whose name matches a registered project. An agent
- * started outside FleetCrown — a terminal you opened, a background job — is
- * invisible to these numbers. So "0 working" means "nothing FleetCrown is
+ * started outside Loki — a terminal you opened, a background job — is
+ * invisible to these numbers. So "0 working" means "nothing Loki is
  * driving", NOT "nothing is happening on this machine", and a bare 0 sitting
  * next to "21 idle" reads as a fleet-wide claim it is not entitled to make.
  * The Workspaces panel says the same thing, but it is most of a page further
  * down — the caveat belongs on the number that provokes the question.
  */
 const COUNT_SCOPE_TITLE =
-  "Counts agents FleetCrown dispatched, plus workspaces it tracks by project name. " +
+  "Counts agents Loki dispatched, plus workspaces it tracks by project name. " +
   "Agents you started yourself elsewhere are not counted here.";
 
 /**
@@ -40,7 +40,7 @@ const COUNT_SCOPE_TITLE =
  * A narrow number that presents as a total is the thing to fix, and until the
  * runner can read the live-session registry, saying so is the fix available.
  */
-const COUNT_SCOPE_SHORT = "FleetCrown-dispatched only";
+const COUNT_SCOPE_SHORT = "Loki-dispatched only";
 
 type Props = {
   dashboard: ControlDashboardState | null;

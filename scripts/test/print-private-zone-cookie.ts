@@ -15,7 +15,7 @@
  * Needs a session token and AUTH_SECRET; the user id comes from /api/me, so no
  * database and no SSH tunnel are required.
  *
- *   FLEETCROWN_SESSION_TOKEN=… npx tsx scripts/test/print-private-zone-cookie.ts
+ *   LOKI_SESSION_TOKEN=… npx tsx scripts/test/print-private-zone-cookie.ts
  */
 import { config } from "dotenv";
 
@@ -25,7 +25,7 @@ import { privateZoneCookiePair } from "@/lib/private-zone-token";
 config({ path: ".env.local", quiet: true });
 config({ path: ".env.hetzner.local", quiet: true });
 
-const BASE = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
+const BASE = (process.env.BASE ?? "https://loki.orangecat.ch").replace(/\/$/, "");
 
 function sessionCookieName(): string {
   return BASE.startsWith("https://") ? "__Secure-authjs.session-token" : "authjs.session-token";
@@ -33,7 +33,7 @@ function sessionCookieName(): string {
 
 async function main() {
   const token = smokeSessionToken().trim();
-  if (!token) throw new Error("No session — set FLEETCROWN_SESSION_TOKEN");
+  if (!token) throw new Error("No session — set LOKI_SESSION_TOKEN");
   if (!process.env.AUTH_SECRET?.trim())
     throw new Error("AUTH_SECRET is required to mint the unlock");
 

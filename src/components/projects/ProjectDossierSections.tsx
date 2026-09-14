@@ -73,7 +73,7 @@ export function NowSection({
   const handoffMs = state?.sessionUpdatedAt?.getTime() ?? null;
   const stale = handoffMs != null && dossier.builtAtMs - handoffMs > DOSSIER_STALE_MS;
   // "Last active" must not ignore the repo: work landing as commits (outside
-  // FleetCrown-dispatched sessions) is activity. A profile once claimed
+  // Loki-dispatched sessions) is activity. A profile once claimed
   // "Idle · last active 1mo ago" while 17 commits landed in two days.
   const lastCommitMs = dossier.commits?.[0]?.atMs ?? null;
   const commitFresher = lastCommitMs != null && (handoffMs == null || lastCommitMs > handoffMs);

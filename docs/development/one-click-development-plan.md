@@ -19,7 +19,7 @@ what's next) must be one coherent story, not five overlapping surfaces.
 > build-contract attrs (architecture/conventions/definition_of_done); last gap
 > `reparaturbonus-zh` backfilled 2026-06-28.
 > **Project retirement (2026-06-28):** `scripts/db/retire-stale-projects.ts --apply`
-> merged Cockpit→fleetcrown, empty dupes (AOZ, SYL, Ivy, revamp-it, truthseeker-tmp),
+> merged Cockpit→loki, empty dupes (AOZ, SYL, Ivy, revamp-it, truthseeker-tmp),
 > **swiss-longevity-hub→surf-your-life** (SLH renamed), and deleted infra/stub rows
 > (dotfiles, kivitendo-erp, Catomean, FitFoot, Hirnli, Warbuffet, OpenClaw).
 > Prod inventory: **18** project entities (was 32). `Bitbaum` runtime dir linked via
@@ -29,11 +29,11 @@ what's next) must be one coherent story, not five overlapping surfaces.
 > consolidated /history + /digests; remaining overlap is naming, not
 > architecture. BLOCKER discovered during deploy (2026-06-12): the Vercel team
 > `orangecat` was blocked for fair-use overage — the then-current
-> `fleetcrown.vercel.app` / `revampit.vercel.app` and orangecat.ch all served
+> `loki.vercel.app` / `revampit.vercel.app` and orangecat.ch all served
 > 402 DEPLOYMENT_DISABLED, and new deploys were rejected.
-> RESOLVED: this triggered the full exit off Vercel — FleetCrown and OrangeCat
+> RESOLVED: this triggered the full exit off Vercel — Loki and OrangeCat
 > are now self-hosted on the Hetzner `bitbaum` box (Caddy + systemd), serving
-> at fleetcrown.orangecat.ch / orangecat.ch. Deploys go via
+> at loki.orangecat.ch / orangecat.ch. Deploys go via
 > `scripts/deploy-hetzner.sh`.
 
 ## Phase 1 — Play/Pause UX (the wow)
@@ -56,7 +56,7 @@ State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.au
 - [ ] 2c. Enrich-from-repo: POST /api/projects/[id]/enrich — fetch README (+ CLAUDE.md if
       present) from gitUrl via user's GitHub token, summarize via Groq, same structured
       patch path as 2a. Button on project profile: "Auto-fill from repo".
-- [ ] 2d. Run enrichment for the real projects (FleetCrown, OrangeCat, Revamp-it, Kivvi, …)
+- [ ] 2d. Run enrichment for the real projects (Loki, OrangeCat, Revamp-it, Kivvi, …)
       against prod so profiles stop being empty.
 
 ## Phase 3 — Dynamic context cleanup (light touch)

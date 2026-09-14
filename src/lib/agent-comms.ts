@@ -45,7 +45,7 @@ export function extractSchema(body: string): { type?: MessageType; status?: Mess
   return { type, status };
 }
 
-// Header: "## 2026-07-06 13:16 — from @kivvi to @fleetcrown" (time optional).
+// Header: "## 2026-07-06 13:16 — from @kivvi to @loki" (time optional).
 const HEADER_RE = /^##\s+(.+?)\s+—\s+from\s+@(\S+)\s+to\s+@(\S+)\s*$/;
 // Subject line, bold or plain: "**Re**: topic" or "Re: topic".
 const RE_LINE_RE = /^(?:\*\*Re\*\*|Re):\s*(.*)$/;

@@ -1,8 +1,8 @@
 /**
- * OpenClaw adapter — the FleetCrown-bundled gateway agent.
+ * OpenClaw adapter — the Loki-bundled gateway agent.
  *
- * OpenClaw is FleetCrown's own minimal-cost meta-agent: it doesn't
- * accept interactive prompts via FleetCrown (no tab switching, no
+ * OpenClaw is Loki's own minimal-cost meta-agent: it doesn't
+ * accept interactive prompts via Loki (no tab switching, no
  * manual injection). It's exposed in the agent list mostly so the UI
  * can show "OpenClaw is/isn't installed" diagnostic info — the actual
  * dispatch path is the Brain → next-best fallback, not a CLI launch.

@@ -3,7 +3,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { verifyOrangeCatBuildIntent } from "../../src/lib/integrations/orangecat-build-intent";
 
 const secret = "test-secret-that-is-at-least-thirty-two-characters";
-process.env.FLEETCROWN_BUILD_INTENT_SECRET = secret;
+process.env.LOKI_BUILD_INTENT_SECRET = secret;
 
 function sign(overrides: Record<string, unknown> = {}): string {
   const now = Math.floor(Date.now() / 1000);
@@ -11,7 +11,7 @@ function sign(overrides: Record<string, unknown> = {}): string {
   const payload = Buffer.from(
     JSON.stringify({
       iss: "orangecat",
-      aud: "fleetcrown",
+      aud: "loki",
       sub: randomUUID(),
       jti: randomUUID(),
       iat: now,
@@ -33,7 +33,7 @@ function sign(overrides: Record<string, unknown> = {}): string {
 
 const valid = verifyOrangeCatBuildIntent(sign());
 assert.equal(valid.iss, "orangecat");
-assert.equal(valid.aud, "fleetcrown");
+assert.equal(valid.aud, "loki");
 assert.equal(valid.exp - valid.iat, 600);
 
 const signed = sign();

@@ -182,10 +182,10 @@ else
   # the site themselves. A day-zero page with no way forward makes the studio
   # the only route to a change, which is the dependency the widget, the repo
   # and this whole scaffold exist to remove.
-  if grep -q 'fleetcrown\.orangecat\.ch' <<< "$page"; then
-    ok "the day-zero page routes its owner to FleetCrown"
+  if grep -q 'loki\.orangecat\.ch' <<< "$page"; then
+    ok "the day-zero page routes its owner to Loki"
   else
-    bad "the day-zero page has no route to FleetCrown — a dead end for its owner"
+    bad "the day-zero page has no route to Loki — a dead end for its owner"
   fi
 
   # Instructions to a developer, rendered at a client. Checked in the JSX only:
@@ -208,9 +208,9 @@ else
     bad "no OrangeCat link — the project is public there and nothing points at it"
   fi
   if printf '%s\n' "$jsx" | grep -B2 'bg-accent[^-]' | grep -q 'ocHref'; then
-    bad "the OrangeCat link is styled as the primary action — FleetCrown is the primary"
+    bad "the OrangeCat link is styled as the primary action — Loki is the primary"
   else
-    ok "the primary action is FleetCrown; OrangeCat stays secondary"
+    ok "the primary action is Loki; OrangeCat stays secondary"
   fi
 
   # HONESTY. The page claims "you can change it from this page", which is only
@@ -234,7 +234,7 @@ fi
 #
 # An earlier version of this asserted the SHAPE of one palette: "the dark scheme
 # must override --color-accent-fg and must NOT override --color-accent". True of
-# the blue placeholder, and WRONG the moment the template adopted FleetCrown's
+# the blue placeholder, and WRONG the moment the template adopted Loki's
 # monochrome action, which inverts by design. It would have failed a correct
 # palette. The property that does not change is the ratio, so compute it.
 CSS="$HERE/../site-template/app/globals.css"
@@ -250,7 +250,7 @@ else
   rm -f /tmp/tpl-contrast.$$
 
   # The palette must belong to something we own. The template shipped an
-  # invented mid-blue matching neither FleetCrown nor OrangeCat, and a site
+  # invented mid-blue matching neither Loki nor OrangeCat, and a site
   # sitting in it read as generated rather than new.
   #
   # COMMENT-AWARE, and this check taught itself the lesson twice: globals.css
@@ -297,7 +297,7 @@ fi
 
 # ── a non-fatal failure must still be visible at the end ─────────────────────
 #
-# Diplodoctor shipped with NO feedback widget. Provisioning needs the FleetCrown
+# Diplodoctor shipped with NO feedback widget. Provisioning needs the Loki
 # database, it was unreachable from the laptop, the step is non-fatal by design,
 # and its warning then scrolled off the top of a run that went on to build a
 # repo, a box, a deploy and a live site. Nothing was broken; nothing reported it
@@ -310,8 +310,8 @@ NS="$HERE/new-site.sh"
 if [ ! -f "$NS" ]; then
   bad "no new-site.sh"
 else
-  # WHERE it provisions decides WHETHER it provisions. Production FleetCrown is
-  # 127.0.0.1/fleetcrown — loopback only — so running provision-widget.ts from
+  # WHERE it provisions decides WHETHER it provisions. Production Loki is
+  # 127.0.0.1/loki — loopback only — so running provision-widget.ts from
   # the laptop fails on every scaffold, and from an agent worktree it fails
   # before the network (gitignored .env.local). Every agent-created site up to
   # 2026-09-11 shipped with no widget because of it. Assert the box path, and
@@ -321,7 +321,7 @@ else
   if grep -q 'provision-widget-on-box.sh' <<< "$ns_live"; then
     ok "the widget is provisioned ON THE BOX, where the database actually is"
   else
-    bad "new-site.sh does not use provision-widget-on-box.sh — prod FleetCrown is loopback-only"
+    bad "new-site.sh does not use provision-widget-on-box.sh — prod Loki is loopback-only"
   fi
   if grep -qE 'npx tsx .*scripts/provision-widget\.ts' <<< "$ns_live"; then
     bad "new-site.sh still calls provision-widget.ts locally — that cannot reach prod"

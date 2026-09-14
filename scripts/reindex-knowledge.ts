@@ -14,6 +14,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getAllDistinctUserIds, getUserProjects } from "@/db/queries/user-projects";
+import { getSelfImprovementTarget } from "@/db/queries/frontier";
+import { loadFleetMap } from "@/lib/register/load-map";
+import { renderFleetMapOverview } from "@/lib/register/map";
 import { getProjectContext } from "@/db/queries/project-context";
 import {
   getProjectDossierByProjectKey,
@@ -39,14 +42,14 @@ const MAX_DOC_CHUNKS_PER_PROJECT = 120;
 
 /**
  * A project's own README + docs/ markdown from the local checkout
- * ($FLEETCROWN_REPOS_DIR or ~/dev/<project>). This is the product-level
+ * ($LOKI_REPOS_DIR or ~/dev/<project>). This is the product-level
  * knowledge (what the app does, how its features work) that profiles and
  * dev logs never contain — without it Loki answered "how does X work in
  * <project>" questions with generic filler (2026-07-17: revampit time
  * cards, while the repo had a complete Zeiterfassung feature).
  */
 function readRepoDocs(project: string): Array<{ rel: string; body: string }> {
-  const base = process.env.FLEETCROWN_REPOS_DIR || path.join(os.homedir(), "dev");
+  const base = process.env.LOKI_REPOS_DIR || path.join(os.homedir(), "dev");
   const repo = path.join(base, project);
   if (!fs.existsSync(path.join(repo, ".git"))) return [];
   const files: string[] = [];
@@ -98,6 +101,7 @@ async function main() {
     process.exit(1);
   }
   const userIds = await getAllDistinctUserIds();
+  const owner = await getSelfImprovementTarget().catch(() => null);
   let totalChunks = 0;
   for (const userId of userIds) {
     const projects = await getUserProjects(userId);
@@ -198,6 +202,23 @@ async function main() {
       });
     }
 
+    // fleet_map: the whole studio in one chunk — every project with its purpose,
+    // layer, state, doors and last movement. Per-project chunks answer "what is
+    // X"; this one answers "what do we have" and "what is happening", which
+    // used to come back as "Not in your data" because no single chunk held the
+    // shape of the fleet. Owner-scoped, like the map endpoint it mirrors.
+    if (owner && userId === owner.userId) {
+      const map = await loadFleetMap().catch(() => null);
+      if (map) {
+        items.push({
+          sourceType: "fleet_map",
+          sourceId: "fleet",
+          chunk: renderFleetMapOverview(map).slice(0, 12000),
+          metadata: { projects: map.summary.projects, generatedAt: map.generatedAt },
+        });
+      }
+    }
+
     // Insert-first, prune-after: upsert the fresh set, then (only if it produced
     // rows) drop owned-type orphans not in it. Ordering matters — deleting first
     // would empty the index whenever the embed step fails (learned the hard way).
@@ -205,7 +226,7 @@ async function main() {
     if (n > 0) {
       await pruneKnowledgeToIds(
         userId,
-        ["project_profile", "dev_log", "goal", "thought", "repo_doc"],
+        ["project_profile", "dev_log", "goal", "thought", "repo_doc", "fleet_map"],
         items.map((i) => i.sourceId),
       );
     }

@@ -79,7 +79,7 @@ const FLAGGED: LokiProvenance = {
   check("meta from before provenance existed reads as none, never as a crash", () => {
     assert.equal(readProvenance(null), null);
     assert.equal(readProvenance({}), null);
-    assert.equal(readProvenance({ model: "groq/x", projectKey: "fleetcrown" }), null);
+    assert.equal(readProvenance({ model: "groq/x", projectKey: "loki" }), null);
   });
 
   check("a foreign or partial grounding object degrades to unchecked, not to clean", () => {

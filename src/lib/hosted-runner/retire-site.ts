@@ -54,7 +54,7 @@ export type RetireSiteRequest = {
 
 /**
  * Never retirable by this path. These are not sites the product created: they
- * are the product. Taking fleetcrown or the bridge off Caddy would end the
+ * are the product. Taking loki or the bridge off Caddy would end the
  * session doing it, and `orangecat` is the apex every site hangs from.
  *
  * The script enforces the same list — this copy exists so a bad request is
@@ -63,7 +63,7 @@ export type RetireSiteRequest = {
  */
 const PROTECTED = new Set([
   "bridge",
-  "fleetcrown",
+  "loki",
   "orangecat",
   "bitbaum",
   "supabase",
@@ -147,7 +147,7 @@ export function retireSiteArgv(
  * being is the runner allowed to take them away, and no other should do either.
  */
 export function siteFactoryEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.FLEETCROWN_SITE_FACTORY === "1";
+  return env.LOKI_SITE_FACTORY === "1";
 }
 
 export type RetireSiteResult =
@@ -161,7 +161,7 @@ export async function runRetireSite(
   if (!siteFactoryEnabled()) {
     return {
       ok: false,
-      error: "site factory is not enabled on this runner (FLEETCROWN_SITE_FACTORY)",
+      error: "site factory is not enabled on this runner (LOKI_SITE_FACTORY)",
     };
   }
   try {

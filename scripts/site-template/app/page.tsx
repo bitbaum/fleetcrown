@@ -10,7 +10,7 @@
  *   1. PROVE it works — the host, live, over TLS, before any claim is made.
  *      The receipts block below is the whole argument: a client can see the
  *      repository, the pipeline and the deploy, and none of it is a promise.
- *   2. Give ONE primary action, into FleetCrown, where they can actually build
+ *   2. Give ONE primary action, into Loki, where they can actually build
  *      it. A site whose owner cannot change it without emailing a person is the
  *      dependency this scaffold exists to remove.
  *   3. Link OrangeCat SECONDARILY. It is where the project is public and
@@ -22,16 +22,16 @@
  *
  * Everything it claims is gated on the thing being true — see WIDGET below.
  */
-const FLEETCROWN = "https://fleetcrown.orangecat.ch";
+const LOKI = "https://loki.orangecat.ch";
 const ORANGECAT = "https://orangecat.ch";
 
-// Written by new-site.sh at scaffold time. Both are absent when the FleetCrown
+// Written by new-site.sh at scaffold time. Both are absent when the Loki
 // database was unreachable — provisioning is non-fatal by design — so each link
 // degrades rather than rendering /projects/undefined.
 const fcProject = process.env.NEXT_PUBLIC_FC_PROJECT_ID;
 const ocProject = process.env.NEXT_PUBLIC_OC_PROJECT_ID;
 
-const buildHref = fcProject ? `${FLEETCROWN}/projects/${fcProject}` : `${FLEETCROWN}/projects`;
+const buildHref = fcProject ? `${LOKI}/projects/${fcProject}` : `${LOKI}/projects`;
 const ocHref = ocProject ? `${ORANGECAT}/projects/${ocProject}` : null;
 
 // WIDGET. The "change it from this page" claim is TRUE ONLY IF the widget is
@@ -79,10 +79,10 @@ export default function Home() {
           __HOST__
         </p>
         <a
-          href={FLEETCROWN}
+          href={LOKI}
           className="font-mono text-xs uppercase tracking-caps text-fg-muted underline decoration-border-subtle underline-offset-4 transition-colors hover:text-fg-primary hover:decoration-fg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent-fg"
         >
-          Built with FleetCrown
+          Built with Loki
         </a>
       </header>
 

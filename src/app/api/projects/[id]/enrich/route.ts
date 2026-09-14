@@ -10,7 +10,7 @@ import { HTTP_TIMEOUT_SHORT_MS } from "@/lib/constants/time";
 
 // Repo → profile. The project's own README (plus CLAUDE.md when present)
 // already says what the project is — websites and repos hold the context,
-// FleetCrown profiles shouldn't be emptier than the repo. One click pulls
+// Loki profiles shouldn't be emptier than the repo. One click pulls
 // the repo docs, the model fills description/mission/vision/customers/
 // stack/status/next_step through the same path as the free-form brief.
 

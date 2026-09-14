@@ -1,4 +1,4 @@
-import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { SOURCE_LOKI_UI } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import {
   CreateRobotBody,
@@ -181,7 +181,7 @@ export async function createRobot(userId: string, input: CreateRobotInput) {
       name: input.name,
       type: ENTITY_TYPE.ROBOT,
       description: input.description || null,
-      source: SOURCE_FLEETCROWN_UI,
+      source: SOURCE_LOKI_UI,
     })
     .returning({ id: entities.id, name: entities.name });
 

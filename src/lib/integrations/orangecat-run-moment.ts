@@ -38,7 +38,7 @@ export function buildRunMoment(projectName: string, run: RunPromoteInput): RunMo
   const done = run.summary?.done?.trim();
   const next = run.summary?.next?.trim();
   return {
-    externalId: `fleetcrown_run_${run.id}`,
+    externalId: `loki_run_${run.id}`,
     title: `${projectName}: ${firstLine(done) || "agent run completed"}`,
     description: [done, next ? `Next: ${next}` : null].filter(Boolean).join("\n\n") || undefined,
     content: {

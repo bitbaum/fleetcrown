@@ -11,7 +11,7 @@ import { postJson } from "@/lib/api/fetch";
 
 // localStorage (not sessionStorage): an OPTIONAL reminder that the user chose to
 // dismiss shouldn't reappear in every new tab. Dismiss once, gone for good.
-const DISMISS_KEY = "fleetcrown-verify-email-dismiss";
+const DISMISS_KEY = "loki-verify-email-dismiss";
 
 /**
  * Routes where the viewport IS the working surface, so an optional reminder

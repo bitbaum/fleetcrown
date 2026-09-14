@@ -1,7 +1,7 @@
-# Self-hosted Postgres for FleetCrown + studio apps (Hetzner VPS).
+# Self-hosted Postgres for Loki + studio apps (Hetzner VPS).
 # Run on a VM with: docker compose up -d
 #
-# Note: FleetCrown production runs Postgres 17 directly on the Hetzner host
+# Note: Loki production runs Postgres 17 directly on the Hetzner host
 # (not this container) — see docs/infrastructure/hetzner-migration.md. This
 # compose file remains a portable way to stand up Postgres + PgBouncer on any
 # fresh VM (the dump/restore target in docs/infrastructure/postgres-portability.md).

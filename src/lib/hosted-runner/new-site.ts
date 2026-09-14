@@ -98,7 +98,7 @@ const RESERVED = new Set([
   "test",
   "preview",
   "bridge",
-  "fleetcrown",
+  "loki",
   "orangecat",
   "supabase",
   "solon",
@@ -198,7 +198,7 @@ export function newSiteArgv(scriptPath: string, req: NewSiteRequest): string[] {
  * runner that is allowed to do it says so out loud, in its own environment.
  */
 export function siteFactoryEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.FLEETCROWN_SITE_FACTORY === "1";
+  return env.LOKI_SITE_FACTORY === "1";
 }
 
 export type NewSiteResult =
@@ -215,7 +215,7 @@ export async function runNewSite(
   if (!siteFactoryEnabled()) {
     return {
       ok: false,
-      error: "site factory is not enabled on this runner (FLEETCROWN_SITE_FACTORY)",
+      error: "site factory is not enabled on this runner (LOKI_SITE_FACTORY)",
     };
   }
   try {

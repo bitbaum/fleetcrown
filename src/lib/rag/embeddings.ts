@@ -2,7 +2,7 @@
  * Provider-agnostic embeddings client (OpenAI /v1/embeddings shape).
  *
  * Ported from OrangeCat's services/ai/embeddings.ts so the two products share one
- * convention. FleetCrown points it at a LOCAL fastembed server on the box
+ * convention. Loki points it at a LOCAL fastembed server on the box
  * (BAAI/bge-small-en-v1.5, 384-dim) — no cloud key needed — but it's just an
  * env-switch away from text-embedding-3-small or any OpenAI-compatible endpoint.
  *

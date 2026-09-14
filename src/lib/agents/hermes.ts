@@ -1,7 +1,7 @@
 /**
  * Hermes adapter — Nous Research's autonomous, self-improving agent runtime.
  *
- * SPIKE (2026-06-25): proves FleetCrown orchestrates Hermes the same way it
+ * SPIKE (2026-06-25): proves Loki orchestrates Hermes the same way it
  * already orchestrates claude/grok/codex — Hermes is a CLI (`hermes`) installed
  * via curl, run in a repo. Two reasons this matters strategically (see
  * docs/architecture/hosted-ephemeral-runner.md + Thoughts "The Captain Needs a

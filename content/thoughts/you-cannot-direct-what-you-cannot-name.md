@@ -1,6 +1,6 @@
 ---
 title: You Cannot Direct What You Cannot Name
-summary: FleetCrown's terminal showed five tabs called "Tab #1" through "Tab #5". One held Claude, one held Grok, one held Cursor, and the command center could not tell you which was which — so the operator kept going back to the physical terminal it was supposed to replace. Fixing it took three passes and taught the same lesson each time: an orchestration layer must join on the identifiers its substrate already assigns, never on the labels humans happen to read.
+summary: Loki's terminal showed five tabs called "Tab #1" through "Tab #5". One held Claude, one held Grok, one held Cursor, and the command center could not tell you which was which — so the operator kept going back to the physical terminal it was supposed to replace. Fixing it took three passes and taught the same lesson each time: an orchestration layer must join on the identifiers its substrate already assigns, never on the labels humans happen to read.
 excerpt: A control plane that cannot name what it controls is a viewer. Identity has to be carried, not inferred.
 publishedAt: 2026-08-14
 tags: architecture,terminal,orchestration,runtime-truth,direction
@@ -11,7 +11,7 @@ readingTimeMin: 7
 
 ## The bottleneck is direction
 
-FleetCrown's mission is a single sentence: direct the creation of everything you can imagine. Underneath it is a claim about where the constraint lives. Raw capability is not the scarce thing any more — a competent agent will write the code, run the tests, and open the pull request. What is scarce is human direction: the ability of one person to hold a fleet in their head and point it somewhere useful.
+Loki's mission is a single sentence: direct the creation of everything you can imagine. Underneath it is a claim about where the constraint lives. Raw capability is not the scarce thing any more — a competent agent will write the code, run the tests, and open the pull request. What is scarce is human direction: the ability of one person to hold a fleet in their head and point it somewhere useful.
 
 That claim has an unglamorous consequence. If direction is the bottleneck, then every ambiguity in the interface is a tax on the only resource that matters. Not a cosmetic tax — a structural one. The number of agents a person can command is bounded by how many they can distinguish.
 
@@ -19,7 +19,7 @@ Which is why a purely cosmetic-looking bug turned out to sit directly on the cri
 
 ## Five tabs, no names
 
-The operator's terminal had five tabs open. One was running Claude Code, one was running Grok, one was running Cursor's agent, and two were shells. In FleetCrown's own web terminal — the command center, the product — they rendered like this:
+The operator's terminal had five tabs open. One was running Claude Code, one was running Grok, one was running Cursor's agent, and two were shells. In Loki's own web terminal — the command center, the product — they rendered like this:
 
 ```
 Tab #1    Tab #3    Tab #4    Tab #5    Bitbaum
@@ -59,7 +59,7 @@ One design decision in that resolver matters more than the join itself.
 
 The lookup runs in a strict order — pane id, then config entry, then directory basename — and if every source fails, it returns an empty map. No badge. The tab renders exactly as it did before.
 
-That is deliberate, and the reasoning is specific to what this surface is. A terminal tab in FleetCrown is not a label you read; it is a target you type into. A badge that says `CLAUDE` on a tab that actually holds Grok does not mislead a human — it aims a dispatched prompt at the wrong agent. The failure of a *wrong* answer is categorically worse than the failure of *no* answer, so the code is built to fall silent rather than guess. Nine processes were examined on the test machine; three resolved and six were dropped, because those six were not in any open tab and a plausible-looking badge for them would have been a lie.
+That is deliberate, and the reasoning is specific to what this surface is. A terminal tab in Loki is not a label you read; it is a target you type into. A badge that says `CLAUDE` on a tab that actually holds Grok does not mislead a human — it aims a dispatched prompt at the wrong agent. The failure of a *wrong* answer is categorically worse than the failure of *no* answer, so the code is built to fall silent rather than guess. Nine processes were examined on the test machine; three resolved and six were dropped, because those six were not in any open tab and a plausible-looking badge for them would have been a lie.
 
 For a system whose job is to let a human aim things, "I don't know" is a complete and respectable answer. "Probably Claude" is not.
 
@@ -79,6 +79,6 @@ The gain is not that the strip is prettier. It is that a glance now carries info
 
 One caveat, stated plainly because the alternative is a claim that quietly is not true for the person reading it.
 
-FleetCrown's cloud builder picks this up on a normal deploy, and it is verified live there. But an operator's *own* machine is driven by Fleet Runner, the desktop app — and a web deploy cannot update a desktop application. The pane-id join reached laptops only when Fleet Runner 0.8.12 shipped as a release, which is why that release went out alongside this change rather than at some tidier moment later.
+Loki's cloud builder picks this up on a normal deploy, and it is verified live there. But an operator's *own* machine is driven by Fleet Runner, the desktop app — and a web deploy cannot update a desktop application. The pane-id join reached laptops only when Fleet Runner 0.8.12 shipped as a release, which is why that release went out alongside this change rather than at some tidier moment later.
 
 It is a small thing to have to say. It is also precisely the kind of split that produces a phantom bug six weeks from now, when someone sees badges on the cloud tabs and none on their own and concludes the feature is broken. It is not broken. It is two programs, and only one of them was updated. Writing that down is cheaper than rediscovering it.

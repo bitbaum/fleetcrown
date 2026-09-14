@@ -1,7 +1,7 @@
 /**
  * Claude Code adapter — Anthropic's `claude` CLI.
  *
- * Claude is the default agent + the one with the most FleetCrown
+ * Claude is the default agent + the one with the most Loki
  * integration: hooks-based activity tracking, session.md handoffs, full
  * lifecycle signals. The capability flags reflect that — `claude` is
  * the reference implementation every other adapter is measured against.
@@ -82,7 +82,7 @@ export const claudeAdapter: AgentAdapter = {
       fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
       fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
     } catch {
-      // Don't fail FleetCrown updates if the agent settings sync fails.
+      // Don't fail Loki updates if the agent settings sync fails.
     }
   },
 };

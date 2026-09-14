@@ -24,7 +24,7 @@ const uid = () => crypto.randomUUID();
 /**
  * Server-owned shell: bash PTYs in tabs and drag-resizable splits.
  *
- * Reachable only where FleetCrown may provision its own PTYs (the local runtime
+ * Reachable only where Loki may provision its own PTYs (the local runtime
  * host, or an explicit sandbox executor) — the hosted control plane must not
  * spawn shells, so `TerminalSurface` does not offer this source there.
  *

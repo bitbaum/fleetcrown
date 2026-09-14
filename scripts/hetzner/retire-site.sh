@@ -58,9 +58,9 @@ case "$MODE" in
 esac
 
 # Infrastructure and identity. These are not sites the product created and must
-# never be retired by it — taking fleetcrown or the bridge off Caddy would end
+# never be retired by it — taking loki or the bridge off Caddy would end
 # the session doing it, and 'orangecat' is the apex the rest hang from.
-PROTECTED="bridge fleetcrown orangecat bitbaum supabase solon evig revampit hirnli-tenants datacat-api datacat-web root system"
+PROTECTED="bridge loki orangecat bitbaum supabase solon evig revampit hirnli-tenants datacat-api datacat-web root system"
 for p in $PROTECTED; do
   [ "$SLUG" = "$p" ] && { echo "ERROR: '$SLUG' is infrastructure — refusing." >&2; exit 3; }
 done

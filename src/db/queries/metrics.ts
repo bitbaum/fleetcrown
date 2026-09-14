@@ -8,7 +8,7 @@
  * Aggregating them on demand at /api/metrics costs one query each,
  * returns immediately, and stays accurate without a separate write path.
  *
- * This file is the SSOT for "what does FleetCrown's recent activity look
+ * This file is the SSOT for "what does Loki's recent activity look
  * like." When a 2 AM problem fires, the operator hits /api/metrics, sees
  * the spike/dip/null, and knows where to look next.
  *

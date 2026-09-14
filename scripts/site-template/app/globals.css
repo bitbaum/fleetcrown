@@ -3,15 +3,15 @@
 /**
  * __TITLE__ — design tokens. The only place a colour, font or radius is defined.
  *
- * THE DEFAULT IS FLEETCROWN'S LANGUAGE, ON PURPOSE.
+ * THE DEFAULT IS LOKI'S LANGUAGE, ON PURPOSE.
  *
  * It used to be an invented mid-blue (#4a6fa5) that belonged to nothing we own.
  * A site sitting in it did not read as "new", it read as "generated" — a
- * template nobody had touched. The palette below is FleetCrown's own, taken
+ * template nobody had touched. The palette below is Loki's own, taken
  * from its globals.css: monochrome, with a single warm accent used sparingly.
  *
- * That is deliberate. Until its owner builds it, this site IS a FleetCrown
- * surface and should look like one — "made with FleetCrown, not yet yours"
+ * That is deliberate. Until its owner builds it, this site IS a Loki
+ * surface and should look like one — "made with Loki, not yet yours"
  * rather than "unfinished template".
  *
  * ⚠️  ONCE IT IS THEIRS, THESE VALUES MUST CHANGE.
@@ -27,7 +27,7 @@
  *   Tier 2  semantics  — what components use, always
  * Retheming is then editing this file and nothing else.
  *
- * Colours are oklch, matching FleetCrown. Perceptual lightness means a scheme
+ * Colours are oklch, matching Loki. Perceptual lightness means a scheme
  * can be inverted by moving L and leaving hue and chroma alone.
  */
 @theme {
@@ -66,7 +66,7 @@
        accent           the primary action as a SURFACE
        accent-contrast  the label ON that surface
        accent-fg        the accent as TEXT, on the page ground
-     No single value serves all three. FleetCrown's primary action is
+     No single value serves all three. Loki's primary action is
      monochrome and INVERTS between schemes (near-black on light, near-white
      on dark), so `accent` and `accent-contrast` must swap together — while
      `accent-fg` is the warm accent and moves independently of both. Every

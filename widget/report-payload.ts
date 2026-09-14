@@ -1,5 +1,5 @@
 /**
- * Payload shaping for programmatic reports (`window.FleetCrown.report`).
+ * Payload shaping for programmatic reports (`window.Loki.report`).
  *
  * Lives apart from main.ts because main.ts is a DOM bundle: this is the only
  * part of the report path with arithmetic that can silently lose information,

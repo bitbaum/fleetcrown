@@ -1,5 +1,5 @@
 /**
- * Where FleetCrown creates repositories: the organisation, never a person.
+ * Where Loki creates repositories: the organisation, never a person.
  *
  * On 2026-08-27 the whole fleet (41 repos) moved from the personal `catomean`
  * account into the `bitbaum` org, and the changelog said "the org is the

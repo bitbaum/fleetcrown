@@ -1,7 +1,7 @@
 "use client";
 
 // The living business plan — where automatic business development becomes
-// visible. AI generates the plan from everything FleetCrown knows (profile,
+// visible. AI generates the plan from everything Loki knows (profile,
 // sibling projects, recent agent activity); each plan action is one click
 // from the project's prompt queue, so the autopilot executes the business
 // plan the same way it executes code work. Regenerating iterates the plan

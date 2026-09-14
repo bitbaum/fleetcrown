@@ -1,15 +1,15 @@
 /**
- * OrangeCat integration — outbound calls FROM FleetCrown TO OrangeCat.
+ * OrangeCat integration — outbound calls FROM Loki TO OrangeCat.
  *
- * Loop A (subscriptions): every time a FleetCrown user adds a subscription
+ * Loop A (subscriptions): every time a Loki user adds a subscription
  * on the /money page, we mirror it into OrangeCat as a `service` record
- * owned by the actor the integration key is bound to (the FleetCrown
+ * owned by the actor the integration key is bound to (the Loki
  * group actor inside OrangeCat). This gives:
- *   - one ledger across the studio (Mao sees FleetCrown's spend in OC)
+ *   - one ledger across the studio (Mao sees Loki's spend in OC)
  *   - the bitbaum studio narrative its first real data point
  *
  * Auth: `ORANGECAT_API_KEY` (mint at /settings/integrations on OrangeCat,
- * choose the FleetCrown group actor at mint time). The SDK takes care of
+ * choose the Loki group actor at mint time). The SDK takes care of
  * Idempotency-Key, retries (3, exp backoff honouring Retry-After),
  * timeouts (20s), and the standard error envelope.
  *
@@ -29,7 +29,7 @@ import { subscriptions } from "@/db/schema";
  *  (ORANGECAT_API_BASE / ORANGECAT_OAUTH_ISSUER). */
 export const ORANGECAT_BASE_FALLBACK = "https://orangecat.ch";
 
-/** SSOT for the OrangeCat origin FleetCrown calls (env override, else fallback).
+/** SSOT for the OrangeCat origin Loki calls (env override, else fallback).
  *  Every FC→OC integration imports this instead of re-deriving it. */
 export const OC_BASE = process.env.ORANGECAT_API_BASE ?? ORANGECAT_BASE_FALLBACK;
 
@@ -73,13 +73,13 @@ export async function getOrangeCatClient(): Promise<OrangeCatClient | null> {
   cached = new sdk.OrangeCatClient({
     apiKey,
     baseUrl: OC_BASE,
-    userAgent: `fleetcrown/${process.env.npm_package_version ?? "0.1.0"} (+sdk)`,
+    userAgent: `loki/${process.env.npm_package_version ?? "0.1.0"} (+sdk)`,
   });
   return cached;
 }
 
 /**
- * Mirror a FleetCrown subscription into OrangeCat as a `service` record.
+ * Mirror a Loki subscription into OrangeCat as a `service` record.
  * Fire-and-forget — never throws. Returns the OrangeCat service id on
  * success so callers can persist the link later (schema migration is a
  * follow-up; for the spike we log it).
@@ -101,9 +101,9 @@ export async function syncSubscriptionToOrangeCat(
         currency: sub.currency ?? undefined,
       },
       {
-        // Stable idempotency key so retried POSTs on the FleetCrown side
+        // Stable idempotency key so retried POSTs on the Loki side
         // dedupe at OrangeCat (when server-side dedup lands).
-        idempotencyKey: `fleetcrown_sub_${sub.id}`,
+        idempotencyKey: `loki_sub_${sub.id}`,
       },
     );
     // Persist the back-link so /money can render a "Synced ✓" badge and
@@ -116,13 +116,13 @@ export async function syncSubscriptionToOrangeCat(
         .where(eq(subscriptions.id, sub.id));
     } catch (linkErr) {
       console.warn("[orangecat] back-link write failed (non-fatal)", {
-        fleetcrown_subscription_id: sub.id,
+        loki_subscription_id: sub.id,
         orangecat_service_id: service.id,
         linkErr,
       });
     }
     console.log("[orangecat] subscription synced", {
-      fleetcrown_subscription_id: sub.id,
+      loki_subscription_id: sub.id,
       orangecat_service_id: service.id,
     });
     return service.id;
@@ -134,17 +134,16 @@ export async function syncSubscriptionToOrangeCat(
 
 function buildDescription(sub: SubscriptionForSync): string {
   const freq = sub.frequency ? sub.frequency.toLowerCase() : "recurring";
-  const lines = [
-    `FleetCrown subscription · ${freq}`,
-    sub.notes ? `Note: ${sub.notes}` : null,
-  ].filter(Boolean);
+  const lines = [`Loki subscription · ${freq}`, sub.notes ? `Note: ${sub.notes}` : null].filter(
+    Boolean,
+  );
   return lines.join("\n");
 }
 
 function logSyncFailure(sub: SubscriptionForSync, err: unknown): void {
   if (errorClass && err instanceof errorClass) {
     console.warn("[orangecat] sync failed (non-fatal)", {
-      fleetcrown_subscription_id: sub.id,
+      loki_subscription_id: sub.id,
       code: err.code,
       status: err.status,
       message: err.message,
@@ -153,7 +152,7 @@ function logSyncFailure(sub: SubscriptionForSync, err: unknown): void {
     return;
   }
   console.warn("[orangecat] sync failed (non-fatal, unknown error)", {
-    fleetcrown_subscription_id: sub.id,
+    loki_subscription_id: sub.id,
     err,
   });
 }

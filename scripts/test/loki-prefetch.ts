@@ -6,23 +6,17 @@ import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
 import type { LokiProject } from "@/components/loki/types";
 
 const projects: LokiProject[] = [
-  { id: "1", name: "fleetcrown", topGoal: null },
+  { id: "1", name: "loki", topGoal: null },
   { id: "2", name: "kivvi", topGoal: null },
 ];
 
-if (
-  JSON.stringify(resolveLokiProjectSelection(projects, "fleetcrown")) !==
-  JSON.stringify(["fleetcrown"])
-) {
+if (JSON.stringify(resolveLokiProjectSelection(projects, "loki")) !== JSON.stringify(["loki"])) {
   throw new Error("named project select");
 }
 if (JSON.stringify(resolveLokiProjectSelection(projects, null)) !== JSON.stringify([])) {
   throw new Error("multi project no auto select");
 }
-if (
-  JSON.stringify(resolveLokiProjectSelection([projects[0]], null)) !==
-  JSON.stringify(["fleetcrown"])
-) {
+if (JSON.stringify(resolveLokiProjectSelection([projects[0]], null)) !== JSON.stringify(["loki"])) {
   throw new Error("single project auto select");
 }
 

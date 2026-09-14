@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Generate + push systemd units, launch scripts, and Caddy vhosts for every
 # app in apps.conf. Idempotent. Does NOT touch the four pre-existing services
-# (bridge, fleetcrown, orangecat, evig) or any /opt/<app>/.env.
+# (bridge, loki, orangecat, evig) or any /opt/<app>/.env.
 # Usage: sync-infra.sh [app ...]   (no args = all)
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -58,7 +58,7 @@ RestartSec=3
 #
 # 3s, not 15: a Next standalone server closes its listener on SIGTERM and then
 # waits on keep-alive connections the proxy never closes, so the drain never
-# finishes and the whole timeout is served as 502s. Measured on fleetcrown
+# finishes and the whole timeout is served as 502s. Measured on loki
 # (2026-08-14): ~13s of refused connections per deploy. Cut the wait; the
 # matching lb_try_duration below hides what is left.
 TimeoutStopSec=3

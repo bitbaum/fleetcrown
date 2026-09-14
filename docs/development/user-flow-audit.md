@@ -1,4 +1,4 @@
-# User Flow Audit — FleetCrown
+# User Flow Audit — Loki
 
 ---
 created_date: 2026-07-04
@@ -20,7 +20,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Name | What it is today | User-facing? |
 |------|------------------|--------------|
 | **Loki** | In-app assistant on `/loki` — OpenClaw `main` agent via `openclaw-gateway.ts` (`loki-core.ts`). Same brain as Telegram when gateway is up. | **Yes** — product name in nav, composer, Settings → Voice |
-| **Ivy** | **Legacy** persona name for the OpenClaw assistant (pre–FleetCrown rebrand). Still appears in old docs, `content/thoughts` author lines, DB channel key `ivy` (UI label → "Loki" in `project-detail-types.ts`), and ops runbooks (`migrate-openclaw.sh`). | **No** in current UI — do not use in new copy |
+| **Ivy** | **Legacy** persona name for the OpenClaw assistant (pre–Loki rebrand). Still appears in old docs, `content/thoughts` author lines, DB channel key `ivy` (UI label → "Loki" in `project-detail-types.ts`), and ops runbooks (`migrate-openclaw.sh`). | **No** in current UI — do not use in new copy |
 | **OpenClaw gateway** | Infrastructure Loki talks to (WebSocket). Was sometimes called "Ivy gateway" in ops docs. | Internal |
 | **`runTool` / local CLIs** | Shell-out layer (`lib/tools.ts`) for `gog calendar`, `weather.sh`, git scripts on a machine with tools installed — **not** Loki. Calendar on hosted prod returns `runtimeOnly: true` (no Google CLI on box). | N/A |
 
@@ -52,7 +52,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | **C** | Partial — known gap, misleading surface, or graceful degradation | No |
 | **D** | Stub, redirect-only, or explicit roadmap — UI oversells capability | No |
 
-**“Full implied outcome”** = the user gets what the button/copy suggests without extra setup. On hosted prod (`fleetcrown.orangecat.ch`), **~37%** of mapped flows meet that bar (~75 of ~203). **~63%** need a builder, integration, or have a known gap.
+**“Full implied outcome”** = the user gets what the button/copy suggests without extra setup. On hosted prod (`loki.orangecat.ch`), **~37%** of mapped flows meet that bar (~75 of ~203). **~63%** need a builder, integration, or have a known gap.
 
 ## Verification (2026-07-04)
 
@@ -71,12 +71,12 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 
 Script: `scripts/test/authenticated-smoke.ts`. Resolves a session via (in order):
 
-1. `FLEETCROWN_SESSION_TOKEN` (`COCKPIT_SESSION_TOKEN` legacy)
+1. `LOKI_SESSION_TOKEN` (`COCKPIT_SESSION_TOKEN` legacy)
 2. `SMOKE_EMAIL` + `SMOKE_PASSWORD` (credentials sign-in)
 3. JWT mint with `AUTH_SECRET` + prod user row (works because Auth.js uses **JWT strategy** — the `sessions` table is empty)
 4. Brave browser profile copy (`AUTH_MODE=browser`)
 
-Optional: `SMOKE_PRIVATE_PIN` unlocks private-zone API probes (`fleetcrown-pz` cookie; reads legacy `cockpit-pz`).
+Optional: `SMOKE_PRIVATE_PIN` unlocks private-zone API probes (`loki-pz` cookie; reads legacy `cockpit-pz`).
 
 Report written to `.tmp/authenticated-smoke-report.json`.
 
@@ -95,7 +95,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 
 **115/115 probes passed** with session + PIN unlock on production.
 
-**Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch pnpm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
+**Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://loki.orangecat.ch pnpm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
 **UI flows:** `SMOKE_PRIVATE_PIN=… pnpm run dogfood:ui-flows:ci` — Ask Loki from People card, habits heatmap, goal → Control prefill + harmless full dispatch when builder is online, prompt fork, Run with Loki modal.
 
@@ -103,13 +103,13 @@ Re-run:
 
 ```bash
 # Full authenticated probe suite
-BASE=https://fleetcrown.orangecat.ch pnpm run test:authenticated-smoke
+BASE=https://loki.orangecat.ch pnpm run test:authenticated-smoke
 
 # With private-zone unlock (operator PIN — never commit)
-SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch pnpm run test:authenticated-smoke
+SMOKE_PRIVATE_PIN=… BASE=https://loki.orangecat.ch pnpm run test:authenticated-smoke
 
 # Legacy route smoke with a minted token
-FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch pnpm run smoke
+LOKI_SESSION_TOKEN=… BASE=https://loki.orangecat.ch pnpm run smoke
 ```
 
 ---
@@ -448,7 +448,7 @@ anything. There is no self-serve checkout to audit: a paid tier is a static
 
 ## 14. Desktop / Fleet Runner only
 
-- [~] **D01** `fleetcrown://auth?token=` — **B**
+- [~] **D01** `loki://auth?token=` — **B**
 - [~] **D02** Auto-pair agent token IPC — **B**
 - [~] **D03** Scan ~/dev for import — **B**
 - [~] **D04** Local peek IPC — **B**

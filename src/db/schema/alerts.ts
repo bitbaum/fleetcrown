@@ -15,7 +15,7 @@ export const alerts = pgTable(
     entityId: uuid("entity_id"), // optional link to an entity
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     dismissed: boolean("dismissed").default(false),
-    actionUrl: text("action_url"), // link to relevant FleetCrown page
+    actionUrl: text("action_url"), // link to relevant Loki page
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
   },

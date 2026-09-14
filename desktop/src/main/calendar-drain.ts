@@ -15,7 +15,7 @@
  * idempotent (a booked row drops out of the next GET pass).
  *
  * Auth + base URL are shared with the poller/pusher: same saved bearer token
- * (token-store) and same FLEETCROWN_WEB_URL||APP_URL resolution. We deliberately
+ * (token-store) and same LOKI_WEB_URL||APP_URL resolution. We deliberately
  * do NOT clear the token on auth failure here — the poller/pusher own that
  * lifecycle; the drain just backs off and lets their restart hooks recover.
  */
@@ -29,7 +29,7 @@ import { loadToken } from './token-store'
 // booked" feeling near-instant without hammering gog's token bucket.
 const DRAIN_INTERVAL_MS = 30_000
 
-const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
+const BASE_URL = (process.env.LOKI_WEB_URL || '').trim() || APP_URL
 
 let timer: NodeJS.Timeout | null = null
 let stopped = false

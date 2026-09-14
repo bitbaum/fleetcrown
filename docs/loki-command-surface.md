@@ -23,7 +23,7 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   modal). `loki:open` events from Control/Projects prefill the composer via `?q=` or
   an in-page `loki:prefill` event when already on `/loki`.
 - **The command composer (§3):** one natural-language field; resolves the project named in
-  the text (e.g. "for fleetcrown, …" scopes to the `fleetcrown` project) and routes the
+  the text (e.g. "for loki, …" scopes to the `loki` project) and routes the
   message to **dispatch** vs **chat** automatically.
 - **Fleet fast paths:** "list my projects" returns the registered fleet from Postgres (no
   web search). "create project …" registers via `createUserProject`; "…and let's go"
@@ -63,7 +63,7 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   Start building scope). When the cloud builder is online, queued dispatches show
   **With builder — starting shortly** (not "builder offline").
 - **Fast project load:** `/loki` server-prefetches the project list and conversation
-  history (no stuck "Loading…" panes). `?project=fleetcrown` auto-selects that project;
+  history (no stuck "Loading…" panes). `?project=loki` auto-selects that project;
   a sole registered project is selected by default.
 
 Open questions §6 #1 (chat vs command — both, routed by intent resolution) and #2

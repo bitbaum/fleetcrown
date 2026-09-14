@@ -30,9 +30,9 @@ A page is not the product — the outcome is. Two mechanisms act before a human:
   `User=` cannot read is re-owned, the app restarted, and ONE `🔧 FIXED (no
   action needed)` message sent (`host-check.sh`).
 - **Agent remediation, queued** (`incident-dispatch.sh`, since 2026-08-29):
-  every unit failure that is worth paging also queues a FleetCrown remediation
+  every unit failure that is worth paging also queues a Loki remediation
   run — `POST /api/inject` with the journal tail embedded, claimed by
-  `fleetcrown-box-runner` within seconds. The page carries "🤖 fix agent
+  `loki-box-runner` within seconds. The page carries "🤖 fix agent
   dispatched (<project>)"; the run's close summary (root cause → action →
   what remains) lands on Telegram via `notifyOnClose`. One incident is one
   dispatch: a `dispatch:<unit>` stamp (6h) shared by both detectors, cleared
@@ -65,6 +65,6 @@ bash scripts/hetzner/install-host-alerts.sh     # (re)wire drop-ins for anything
 
 ## If you ever DO want dashboards
 
-Extend FleetCrown's own `/system` page (already shows disk/mem/uptime) rather
+Extend Loki's own `/system` page (already shows disk/mem/uptime) rather
 than installing a monitoring stack — same data, zero extra RAM, and it dogfoods
 the product. Grafana would cost 400–700MB on a box that runs at ~300MB free.

@@ -80,7 +80,7 @@ export async function listTopLevelActiveGoals(userId: string, limit = 6) {
  *  frontier proposal generator in the real roadmap (open milestones = the
  *  declared gaps it should fill, rather than inventing generic ideas).
  *  Pass entityId to scope to one entity's goals — the frontier loop scopes to
- *  the FleetCrown product entity so it grounds on engineering gaps, not the
+ *  the Loki product entity so it grounds on engineering gaps, not the
  *  owner's unrelated personal life-OS goals. */
 export async function listActiveGoalsWithMilestones(userId: string, entityId?: string) {
   return db

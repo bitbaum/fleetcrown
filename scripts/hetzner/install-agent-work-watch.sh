@@ -31,9 +31,9 @@ scp -q "$SRC" "$HOST:$MON/agent-work-check.sh"
 ssh "$HOST" "chmod 0755 $MON/agent-work-check.sh"
 
 echo "→ agent-work-watch: writing unit + timer"
-ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-agent-work.service" <<'UNIT'
+ssh "$HOST" "cat > /etc/systemd/system/loki-agent-work.service" <<'UNIT'
 [Unit]
-Description=FleetCrown: report agent work stranded on the box
+Description=Loki: report agent work stranded on the box
 After=network-online.target
 
 [Service]
@@ -45,9 +45,9 @@ Type=oneshot
 ExecStart=/opt/monitoring/agent-work-check.sh
 UNIT
 
-ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-agent-work.timer" <<'TIMER'
+ssh "$HOST" "cat > /etc/systemd/system/loki-agent-work.timer" <<'TIMER'
 [Unit]
-Description=FleetCrown: stranded-agent-work sweep (hourly)
+Description=Loki: stranded-agent-work sweep (hourly)
 
 [Timer]
 # Hourly, not per-minute: stranded work is not an emergency, and a chatty
@@ -61,7 +61,7 @@ WantedBy=timers.target
 TIMER
 
 echo "→ agent-work-watch: enabling"
-ssh "$HOST" "systemctl daemon-reload && systemctl enable --now fleetcrown-agent-work.timer && systemctl list-timers fleetcrown-agent-work --no-pager | tail -2"
+ssh "$HOST" "systemctl daemon-reload && systemctl enable --now loki-agent-work.timer && systemctl list-timers loki-agent-work --no-pager | tail -2"
 
 echo "→ agent-work-watch: first run (report only, no alerts)"
 ssh "$HOST" "$MON/agent-work-check.sh --report"

@@ -10,10 +10,7 @@ function readPublicUrl(name: string, fallback: string): URL {
 }
 
 const orangeCatOrigin = readPublicUrl("NEXT_PUBLIC_ORANGECAT_URL", DEFAULT_ORANGECAT_ORIGIN);
-const fleetCrownOrigin = readPublicUrl(
-  "NEXT_PUBLIC_FLEETCROWN_URL",
-  "https://fleetcrown.orangecat.ch",
-);
+const lokiOrigin = readPublicUrl("NEXT_PUBLIC_LOKI_URL", "https://loki.orangecat.ch");
 const solonOrigin = readPublicUrl("NEXT_PUBLIC_SOLON_URL", "https://solon.orangecat.ch");
 
 function orangeCatPage(path: string): string {
@@ -33,12 +30,11 @@ export const ECOSYSTEM = {
     profileUrl: orangeCatPage("/profile/mao-nakamoto"),
     siteUrl: orangeCatOrigin.toString(),
   },
-  fleetCrown: {
-    title: "FleetCrown",
+  loki: {
+    title: "Loki",
     projectId:
-      process.env.NEXT_PUBLIC_FLEETCROWN_ORANGECAT_PROJECT_ID ??
-      "8130c927-114a-45b7-8cc2-99efd5224025",
-    siteUrl: fleetCrownOrigin.toString(),
+      process.env.NEXT_PUBLIC_LOKI_ORANGECAT_PROJECT_ID ?? "8130c927-114a-45b7-8cc2-99efd5224025",
+    siteUrl: lokiOrigin.toString(),
   },
   solon: {
     title: "Solon",
@@ -56,33 +52,33 @@ export const ECOSYSTEM = {
 export const ECOSYSTEM_LINKS = {
   mao: ECOSYSTEM.orangeCat.profileUrl,
   orangeCat: orangeCatPage(`/projects/${ECOSYSTEM.orangeCat.projectId}`),
-  fleetCrown: orangeCatPage(`/projects/${ECOSYSTEM.fleetCrown.projectId}`),
+  loki: orangeCatPage(`/projects/${ECOSYSTEM.loki.projectId}`),
 } as const;
 
-/** Backwards-compatible shape for existing FleetCrown money surfaces. */
+/** Backwards-compatible shape for existing Loki money surfaces. */
 export const ORANGECAT_INTEGRATION = {
-  customer: ECOSYSTEM.fleetCrown.title,
+  customer: ECOSYSTEM.loki.title,
   owner: ECOSYSTEM.owner,
   orangeCat: {
     title: ECOSYSTEM.orangeCat.title,
     projectUrl: ECOSYSTEM_LINKS.orangeCat,
     profile: ECOSYSTEM_LINKS.mao,
   },
-  fleetCrown: {
-    title: ECOSYSTEM.fleetCrown.title,
-    projectUrl: ECOSYSTEM_LINKS.fleetCrown,
-    site: ECOSYSTEM.fleetCrown.siteUrl,
+  loki: {
+    title: ECOSYSTEM.loki.title,
+    projectUrl: ECOSYSTEM_LINKS.loki,
+    site: ECOSYSTEM.loki.siteUrl,
   },
   wallet: {
     btc: ECOSYSTEM.support.bitcoinAddress,
     lightning: ECOSYSTEM.support.lightningAddress,
   },
-  relation: "FleetCrown is a customer of OrangeCat through the shared entity graph.",
-  note: "OrangeCat is the public funding layer; FleetCrown is the building layer.",
+  relation: "Loki is a customer of OrangeCat through the shared entity graph.",
+  note: "OrangeCat is the public funding layer; Loki is the building layer.",
 } as const;
 
 /**
- * What OrangeCat can do for a FleetCrown operator, in one place.
+ * What OrangeCat can do for a Loki operator, in one place.
  *
  * SSOT because two very different consumers say it and must not disagree: the
  * handoff/publish surfaces in `src/components/integrations`, and Loki's
@@ -90,9 +86,8 @@ export const ORANGECAT_INTEGRATION = {
  * Loki has been wrong about what a neighbouring system can do before, and the
  * fix each time was to bind it to a fact rather than to prose.
  *
- * NOTE THE BOUNDARY. These are OrangeCat's capabilities, not FleetCrown's and
- * not Loki's. Loki cannot render a video; it can tell the operator where one
- * gets rendered.
+ * NOTE THE BOUNDARY. These are OrangeCat's capabilities, not Loki's. Loki
+ * cannot render a video; it can tell the operator where one gets rendered.
  */
 export const ORANGECAT_CAPABILITIES = {
   studioUrl: orangeCatPage("/studio"),

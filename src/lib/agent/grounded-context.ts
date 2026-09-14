@@ -26,7 +26,7 @@
  *
  * The durable fix belongs upstream in `buildContract`. It is amended here
  * because ai-kit is a shared package with another consumer (OrangeCat) and an
- * active branch, and FleetCrown's chat is broken now. When the rule lands
+ * active branch, and Loki's chat is broken now. When the rule lands
  * upstream, delete this file and call `buildGroundedContext` directly.
  *
  * ── Why appending is safe ────────────────────────────────────────────────────

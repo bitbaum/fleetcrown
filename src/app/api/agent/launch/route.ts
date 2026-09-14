@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Server-side launch runs the agent in a FleetCrown-owned PTY (not a zellij
+    // Server-side launch runs the agent in a Loki-owned PTY (not a zellij
     // pane): a headless box has no attached zellij client, so the old
     // go-to-tab-name puppeting blocked forever. The owned PTY is viewable in the
     // browser terminal and needs no attached human terminal. See

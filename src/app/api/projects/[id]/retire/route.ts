@@ -1,7 +1,7 @@
 /**
  * POST /api/projects/[id]/retire — take a project's SITE down.
  *
- * Distinct from DELETE /api/projects/[id], which removes the FleetCrown
+ * Distinct from DELETE /api/projects/[id], which removes the Loki
  * project and (optionally) its repository. That route never touched the box,
  * so deleting a project left its website serving to the whole internet on a
  * wildcard DNS record, with a certificate, an enabled systemd unit, and a port

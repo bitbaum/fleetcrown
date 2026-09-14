@@ -17,7 +17,7 @@ import type { ThoughtBlock } from "@/lib/thoughts-content";
 
 /**
  * Essay body renderer: bip-kit's reference renderer (`ArticleBody`) with two
- * FleetCrown-specific behaviors layered on top of the raw block stream:
+ * Loki-specific behaviors layered on top of the raw block stream:
  *
  * 1. Alt-as-caption. Essays here caption images through the alt text (the
  *    pre-bip-kit renderer displayed `alt` as the figcaption). bip-kit only

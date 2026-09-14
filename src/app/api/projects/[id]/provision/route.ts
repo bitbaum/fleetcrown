@@ -33,7 +33,7 @@ import {
 // the gitUrl into dirPath on first dispatch (box-workspace.ensureBoxWorkspace).
 
 // Must match box-workspace.ts DEV_ROOT so dirPath == where the runner clones.
-const DEV_ROOT = process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev");
+const DEV_ROOT = process.env.LOKI_BOX_DEV_ROOT || path.join(os.homedir(), "dev");
 
 const Body = z.object({
   visibility: z.enum(["private", "public"]).default("private"),
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       linked.owner,
       linked.repo,
       template,
-      { name: project.name, description: `Started from FleetCrown · ${project.name}` },
+      { name: project.name, description: `Started from Loki · ${project.name}` },
       feedback,
     );
     return NextResponse.json(

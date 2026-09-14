@@ -79,6 +79,16 @@ export const ECONOMY_CUES =
   /\b(demand|need(?:s|ed)?|opportunit|market|client|customer|lead|leads|sell|sale|revenue|money|earn|paid|build for|who wants|looking for|orangecat)\w*/i;
 
 /** Projects by name or in aggregate. */
+/**
+ * The studio as a whole: what exists, which pillars, what is live, what is
+ * being worked on. Answered from the fleet MAP as one deterministic fact, not
+ * from whichever chunk wins a similarity race — on 2026-09-14 "what projects do
+ * we have, name the three pillars" retrieved an essay and answered "Blog,
+ * Roadmap, Changelog".
+ */
+export const FLEET_MAP_CUES =
+  /\b(what (?:do|did) we have|what (?:are|is) (?:our|the) (?:projects?|products?|pillars?|studio|fleet|portfolio|ventures?)|which (?:projects?|products?|sites?|apps?) (?:are|is) live|pillars?|the studio|bitbaum|portfolio|ventures?|all (?:our |the )?projects|every project|how many projects|what is happening|what'?s happening|what is loki for|what is orangecat for|what is solon for)\b/i;
+
 export const PROJECT_CUES =
   /\b(project|projects|repo|repos|repository|app|apps|site|sites|stack|codebase|product|products)\w*/i;
 

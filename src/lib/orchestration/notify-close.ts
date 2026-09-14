@@ -1,6 +1,7 @@
 import { selfTelegramTarget, sendTelegramMessage } from "@/lib/actions/telegram-send";
 import { logDebug } from "@/db/queries/debug-logs";
 import { formatRunCloseMessage } from "@/lib/orchestration/notify-close-format";
+import { postRunOutcomeToConversation } from "@/lib/orchestration/run-outcome-post";
 import { pushToUser } from "@/lib/push-fanout";
 import { PUSH_TAG_PREFIX } from "@/config/brand-storage";
 import type { OrchestrationRun } from "@/db/schema/orchestration-runs";
@@ -29,6 +30,9 @@ import type { OrchestrationRun } from "@/db/schema/orchestration-runs";
  * in notify-close-format.ts (pure, unit-tested).
  */
 export async function notifyRunClosed(run: OrchestrationRun): Promise<void> {
+  // The thread that asked for the work is a channel too — the one the person
+  // is most likely still looking at. Independent of push/Telegram configuration.
+  void postRunOutcomeToConversation(run);
   try {
     const message = formatRunCloseMessage(run);
     if (!message) return;

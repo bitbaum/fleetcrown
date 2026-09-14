@@ -13,19 +13,19 @@
 # and free (the deploy returns as soon as the app is verified live).
 #
 # Deliberately NOT in the runner's own cgroup: systemd-run gives this its own
-# unit, so restarting fleetcrown-box-runner cannot kill the thing doing the
+# unit, so restarting loki-box-runner cannot kill the thing doing the
 # restarting.
 
 set -uo pipefail
 
-UNIT="fleetcrown-box-runner"
+UNIT="loki-box-runner"
 CGROUP="/sys/fs/cgroup/system.slice/${UNIT}.service/cgroup.procs"
 # Generous because it costs nothing now. Still bounded: a runner-code fix must
 # eventually land even if some agent never exits.
-MAX="${FLEETCROWN_RUNNER_DRAIN_SECS:-1800}"
+MAX="${LOKI_RUNNER_DRAIN_SECS:-1800}"
 INTERVAL=20
 
-log() { logger -t fleetcrown-drain "$*" 2>/dev/null || true; echo "[drain] $*"; }
+log() { logger -t loki-drain "$*" 2>/dev/null || true; echo "[drain] $*"; }
 
 count_agents() {
   [ -r "$CGROUP" ] || { echo 0; return 0; }

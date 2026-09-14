@@ -1,10 +1,10 @@
-# FleetCrown Agent Execution Platform
+# Loki Agent Execution Platform
 
 **Status:** Architecture / north star. LocalPtyExecutor shipped; Docker-backed
 SandboxExecutor substrate shipped behind an explicit env flag. The zellij path is
 gone (2026-09-11, Fleet Runner 0.8.19): every agent PTY is owned by a runner.
 **Last updated:** 2026-09-11
-**Scope:** How FleetCrown runs, streams, observes, and controls agent processes for
+**Scope:** How Loki runs, streams, observes, and controls agent processes for
 many tenants on arbitrary client devices — without puppeting anyone's terminal.
 
 ---
@@ -30,13 +30,13 @@ a `/tmp` sentinel. That was a single-user, single-box, one-multiplexer hack.
 
 - **An agent is a process with: a PTY (stdin/stdout), a filesystem (the workspace), a
   lifecycle, and observable state.** Nothing about that requires zellij or a tab name.
-- **FleetCrown must OWN that process's PTY and environment** — spawn it in compute we
+- **Loki must OWN that process's PTY and environment** — spawn it in compute we
   control — rather than borrow a human's interactive terminal.
 - **The terminal is a rendering target, never the substrate.** Same owned byte-stream
   renders to the browser `xterm`, a mobile view, or a native attach client.
 - **State is event-sourced from the owned process**, never screen-scraped or inferred
   from `/tmp`. "Working" = the process emitted work / has live output, as a fact.
-- **Identity is a stable id FleetCrown assigns**, never a zellij name we have to find.
+- **Identity is a stable id Loki assigns**, never a zellij name we have to find.
 
 ---
 
@@ -106,11 +106,11 @@ not research.
 
 1. **`Executor` interface + event-sourced workspace state** — the SSOT. Status comes from
    the event log, not `/proc` scans or `/tmp` sentinels.
-2. **`LocalPtyExecutor` + stream to the `@xterm/xterm` already shipped** — FleetCrown works
+2. **`LocalPtyExecutor` + stream to the `@xterm/xterm` already shipped** — Loki works
    with **zero zellij**, single-tenant. This is the proving ground for the interface.
 3. **Unify the dashboard on the Executor model** — done: the zellij path is deleted and
    the cloud path is the same executor on the box; one mental model.
-4. **`SandboxExecutor`** — Docker-backed substrate behind `FLEETCROWN_EXECUTOR=sandbox`.
+4. **`SandboxExecutor`** — Docker-backed substrate behind `LOKI_EXECUTOR=sandbox`.
    It enforces a workspace root, per-container resource limits, `no-new-privileges`,
    `cap-drop=ALL`, and deny-by-default networking. This is the execution primitive;
    product entitlements still decide who may use hosted execution.
@@ -147,14 +147,14 @@ Failure classification for a run lives in `src/lib/failure-remedy.ts`
 
 The active executor is selected in `src/lib/agent-execution/index.ts`.
 
-- `FLEETCROWN_EXECUTOR=local-pty` (default): node-pty on the host.
-- `FLEETCROWN_EXECUTOR=sandbox`: Docker-backed sandbox.
-- `FLEETCROWN_SANDBOX_IMAGE`: image to run; default `ubuntu:24.04`.
-- `FLEETCROWN_SANDBOX_WORKSPACE_ROOT`: only `cwd` values under this root are accepted.
-- `FLEETCROWN_SANDBOX_NETWORK`: `none` (default) or `bridge`.
-- `FLEETCROWN_SANDBOX_CPUS`, `FLEETCROWN_SANDBOX_MEMORY`, `FLEETCROWN_SANDBOX_PIDS`: resource caps.
-- `FLEETCROWN_SANDBOX_USER`: `current` (default) or `root`.
-- `FLEETCROWN_SANDBOX_MOUNT`: `rw` (default) or `ro`.
+- `LOKI_EXECUTOR=local-pty` (default): node-pty on the host.
+- `LOKI_EXECUTOR=sandbox`: Docker-backed sandbox.
+- `LOKI_SANDBOX_IMAGE`: image to run; default `ubuntu:24.04`.
+- `LOKI_SANDBOX_WORKSPACE_ROOT`: only `cwd` values under this root are accepted.
+- `LOKI_SANDBOX_NETWORK`: `none` (default) or `bridge`.
+- `LOKI_SANDBOX_CPUS`, `LOKI_SANDBOX_MEMORY`, `LOKI_SANDBOX_PIDS`: resource caps.
+- `LOKI_SANDBOX_USER`: `current` (default) or `root`.
+- `LOKI_SANDBOX_MOUNT`: `rw` (default) or `ro`.
 
 Important: this substrate does **not** by itself make hosted execution public. The
 shared cloud builder remains private until hosted entitlements, per-user

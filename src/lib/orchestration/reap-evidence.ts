@@ -69,7 +69,7 @@ export async function correctTimeoutReapsWithRepoEvidence(
 
       // The repo URL lives in TWO places (two-tier creation gap): the project
       // entity, and the user_projects registration whose name IS the run's
-      // projectKey. Real fleets (fleetcrown itself) have it only on the
+      // projectKey. Real fleets (loki itself) have it only on the
       // latter — check both.
       const project = await db.query.entities.findFirst({
         where: and(

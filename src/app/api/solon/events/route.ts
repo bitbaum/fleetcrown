@@ -6,7 +6,7 @@ import { verifySolonWebhookSignature } from "@/lib/integrations/solon-webhook";
 /**
  * Solon event webhook — governance signals reaching the capability layer.
  *
- * v1 is a doorbell log only: FleetCrown has no Solon-governed artifact yet,
+ * v1 is a doorbell log only: Loki has no Solon-governed artifact yet,
  * so a decision.finalized is recorded and acknowledged, nothing more. When a
  * governed artifact lands here, this receiver grows the same shape as
  * OrangeCat's decision edge: fetch the decision document, re-verify every

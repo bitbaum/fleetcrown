@@ -8,8 +8,8 @@
  *      by id.
  *   2. Otherwise fuzzy-match the project's `name` field against the tab
  *      name and the dir's basename, case-insensitive and with `_`/`-`
- *      stripped so "fleet-crown", "fleetCrown", and "fleet_crown" all
- *      match "FleetCrown".
+ *      stripped so "loki", "loki", and "loki" all
+ *      match "Loki".
  *
  * Pre-extraction this logic lived inline in api/control/route.ts in three
  * near-identical functions (matchProfile / matchProfileById /

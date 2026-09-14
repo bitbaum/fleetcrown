@@ -360,11 +360,11 @@ function ComingSoonPanel({
       <div className="flex flex-col items-center gap-3 text-center">
         <p className="ui-public-download-lede">
           The {platform.label} build is not published yet — watch releases to get the{" "}
-          {platform.label} build the moment it lands, or use FleetCrown on the web now.
+          {platform.label} build the moment it lands, or use Loki on the web now.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <a
-            href="https://github.com/bitbaum/fleetcrown-releases/releases"
+            href="https://github.com/bitbaum/loki-releases/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="ui-public-download-cta"
@@ -373,7 +373,7 @@ function ComingSoonPanel({
             <ExternalLink className="ui-public-download-prereq-link-icon" aria-hidden />
           </a>
           <Link href="/" className="ui-public-download-secondary">
-            Use FleetCrown on the web
+            Use Loki on the web
           </Link>
         </div>
       </div>

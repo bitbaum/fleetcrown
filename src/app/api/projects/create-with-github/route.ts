@@ -1,5 +1,5 @@
 // Cloud-side "start a new project from scratch" — creates a brand new GitHub
-// repo AND the matching FleetCrown project record in one round-trip. For users
+// repo AND the matching Loki project record in one round-trip. For users
 // with an idea but no local runtime; they clone the repo afterward.
 //
 // Companion to /api/project/bootstrap (full local-stack scaffold, needs runner)
@@ -12,7 +12,7 @@ import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
 import { getRepoWriteToken } from "@/lib/github-org-token";
 import { createProject } from "@/db/queries/projects";
-import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { SOURCE_LOKI_UI } from "@/lib/constants";
 import { TEMPLATES, renderTemplate } from "@/lib/project-templates";
 import { provisionGithubRepo } from "@/lib/github-provision";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
@@ -70,14 +70,14 @@ export async function POST(req: NextRequest) {
   }
   const { repo, templateSeeded } = result;
 
-  // Now create the FleetCrown project entity linked to the new repo.
+  // Now create the Loki project entity linked to the new repo.
   let projectId: string;
   let projectName: string;
   try {
     const project = await createProject(
       userId,
       { name, description: description ?? undefined, gitUrl: repo.html_url },
-      SOURCE_FLEETCROWN_UI,
+      SOURCE_LOKI_UI,
     );
     projectId = project.id;
     projectName = project.name;
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   const tpl = TEMPLATES[template];
   const firstTask = renderTemplate(tpl.firstTask, {
     name: projectName,
-    description: description ?? `Started from FleetCrown · ${name}`,
+    description: description ?? `Started from Loki · ${name}`,
   });
 
   return NextResponse.json({

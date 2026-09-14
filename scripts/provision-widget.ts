@@ -1,5 +1,5 @@
 /**
- * Give a new site a FleetCrown project and a widget token.
+ * Give a new site a Loki project and a widget token.
  *
  *   npx tsx scripts/provision-widget.ts <slug> <title> <host>
  *
@@ -10,7 +10,7 @@
  *   NEXT_PUBLIC_FC_PROJECT_ID=<uuid>
  *
  * The project id is emitted because the scaffold's day-zero page links its
- * owner to their own FleetCrown project. Without it that link can only reach
+ * owner to their own Loki project. Without it that link can only reach
  * the project LIST — so the single call to action on a brand-new site would
  * ask the person who just received it to go find themselves in a list.
  *
@@ -46,12 +46,12 @@ if (!slug || !title || !host) {
 }
 
 /**
- * The owner. FLEETCROWN_OWNER_EMAIL when set; otherwise the single user in the
+ * The owner. LOKI_OWNER_EMAIL when set; otherwise the single user in the
  * database. Refuses to guess when there is more than one — picking an owner
  * wrong means the site's feedback lands in a stranger's inbox.
  */
 async function resolveOwner(): Promise<string> {
-  const email = process.env.FLEETCROWN_OWNER_EMAIL;
+  const email = process.env.LOKI_OWNER_EMAIL;
   if (email) {
     const row = await db.query.users.findFirst({
       where: eq(users.email, email),
@@ -62,7 +62,7 @@ async function resolveOwner(): Promise<string> {
   }
   const all = await db.select({ id: users.id }).from(users).limit(2);
   if (all.length === 0) die("no users in the database");
-  if (all.length > 1) die("more than one user — set FLEETCROWN_OWNER_EMAIL");
+  if (all.length > 1) die("more than one user — set LOKI_OWNER_EMAIL");
   return all[0].id;
 }
 

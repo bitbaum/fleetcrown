@@ -1,6 +1,6 @@
 ---
 title: The Visitor Is Part of the Fleet Now
-summary: FleetCrown's feedback widget turns a stranger's complaint into a deployed fix — one script tag on any of your sites, a per-project inbox, one-click dispatch to an agent, and a loop that closes itself: when the fix ships, the report resolves automatically and the visitor gets an email. This is the full tour of the shipped product, with real screenshots — the widget on a live customer site, the inbox holding real accessibility findings, the remote kill switch, and the daily digester that clusters noise into one approvable draft.
+summary: Loki's feedback widget turns a stranger's complaint into a deployed fix — one script tag on any of your sites, a per-project inbox, one-click dispatch to an agent, and a loop that closes itself: when the fix ships, the report resolves automatically and the visitor gets an email. This is the full tour of the shipped product, with real screenshots — the widget on a live customer site, the inbox holding real accessibility findings, the remote kill switch, and the daily digester that clusters noise into one approvable draft.
 excerpt: Feedback tools collect. A fleet executes. The difference is whether a complaint ends in a dashboard — or in a deploy.
 publishedAt: 2026-07-29
 tags: feedback,widget,agents,pipeline,approvals,product
@@ -11,18 +11,18 @@ readingTimeMin: 10
 
 ## A complaint that ended in a deploy
 
-Recently, a report landed in FleetCrown's own feedback inbox: the footer links on our public pages — Pricing, Docs, GitHub — were rendering at a contrast ratio of 1.78:1 against the near-black background. WCAG requires 4.5:1. The text was, measurably, near-illegible.
+Recently, a report landed in Loki's own feedback inbox: the footer links on our public pages — Pricing, Docs, GitHub — were rendering at a contrast ratio of 1.78:1 against the near-black background. WCAG requires 4.5:1. The text was, measurably, near-illegible.
 
 Nobody wrote a ticket. Nobody copied the complaint into an issue tracker, triaged it in a meeting, or assigned it a sprint. The report was dispatched to an agent with one click. The agent reproduced the measurement against the live page, wrote a three-line CSS fix, verified the new ratio at 6.45:1, and opened a pull request. When the fix deployed, the report flipped itself to *resolved*.
 
-That loop — stranger's observation in, deployed fix out, reporter notified — is now a FleetCrown product. This is what it looks like and why it exists.
+That loop — stranger's observation in, deployed fix out, reporter notified — is now a Loki product. This is what it looks like and why it exists.
 
 ## One script tag on any site you run
 
-The widget is a single script tag. You enable it on a project's page in FleetCrown, copy the snippet — or press "Install via agent" and an agent adds it to your repo for you — and every public page of that site gets a small feedback button.
+The widget is a single script tag. You enable it on a project's page in Loki, copy the snippet — or press "Install via agent" and an agent adds it to your repo for you — and every public page of that site gets a small feedback button.
 
 ```html
-<script src="https://fleetcrown.orangecat.ch/widget.js"
+<script src="https://loki.orangecat.ch/widget.js"
         data-fc-project="fcw_…" async></script>
 ```
 
@@ -48,7 +48,7 @@ On and off are both one click. "Install via agent" dispatches an agent into the 
 
 Submissions land in a per-project inbox on the project's page. There is deliberately no separate feedback app, no second store — the fleet view on Control is a query over the same rows, showing which projects have new reports.
 
-![Real rows from FleetCrown's own inbox: a synthesized brief and two AI-reviewer findings, all resolved after their fixes deployed.](/thoughts/feedback-inbox.png)
+![Real rows from Loki's own inbox: a synthesized brief and two AI-reviewer findings, all resolved after their fixes deployed.](/thoughts/feedback-inbox.png)
 
 The one action that matters sits on every row: **Dispatch fix**. It composes a scoped prompt from the report — the visitor's text, the URL, the selectors they pointed at — and sends an agent at it. If you want to steer, there is a pencil icon: the note you type is prepended to the prompt as an operator instruction. That is the whole commenting system. We deliberately did not build comment threads on feedback — a note that becomes part of the dispatch is useful; a discussion under a complaint is a place where work goes to die.
 
@@ -78,7 +78,7 @@ The theme path works the same way end to end. The contrast story from the openin
 
 ## Who this is for
 
-FleetCrown is built for builders running several small products at once — the person with four sites, no QA team, no support team, and no appetite for a feedback SaaS whose output is a dashboard someone must remember to read. For that person the economics of feedback are brutal: every report costs a context switch into a project you weren't thinking about, so most reports cost more than they return, so most go unread.
+Loki is built for builders running several small products at once — the person with four sites, no QA team, no support team, and no appetite for a feedback SaaS whose output is a dashboard someone must remember to read. For that person the economics of feedback are brutal: every report costs a context switch into a project you weren't thinking about, so most reports cost more than they return, so most go unread.
 
 The pipeline changes that arithmetic. A report arrives already attached to its project, already carrying the selector and URL an agent needs, already one click from becoming a run in the right repository. The marginal cost of acting on feedback drops to approximately the cost of reading it once and clicking. That is the actual product — not the widget, which is a commodity, but the distance from *submitted* to *deployed*.
 
@@ -88,4 +88,4 @@ It also inverts who feedback tools serve. Conventional tools serve the team: col
 
 Honesty section, because every pipeline description reads like magic until you list the edges. Nothing executes without approval — that is a feature, but it means an unattended inbox stays unattended. The digester runs daily, not in real time; a flood of reports about an outage is the wrong tool's job. An agent can misjudge a fix like any engineer — the run's evidence and the PR are there to be checked, and the approval gate exists precisely because judgment doesn't automate. And reports from strangers include noise; the origin allowlist, rate limits, and token revocation keep the pipe clean, but triage is still a human verb.
 
-The widget is live today on FleetCrown's own public pages and on our first customer's site — the same loop, dogfooded and sold. If you run more than one site, this is what "collecting feedback" should have meant all along: not an inbox, an operating loop.
+The widget is live today on Loki's own public pages and on our first customer's site — the same loop, dogfooded and sold. If you run more than one site, this is what "collecting feedback" should have meant all along: not an inbox, an operating loop.

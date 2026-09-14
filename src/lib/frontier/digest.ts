@@ -16,7 +16,7 @@ const TARGET_PICKS = 8;
 
 const MIN_NON_ARXIV = 2; // guarantee industry/community signal, not an arXiv-only feed
 
-const SYSTEM_PROMPT = `You are the editor of FleetCrown's daily frontier digest: the latest and most significant developments in AI, robotics, and adjacent frontier technology, written for a technical audience of builders.
+const SYSTEM_PROMPT = `You are the editor of Loki's daily frontier digest: the latest and most significant developments in AI, robotics, and adjacent frontier technology, written for a technical audience of builders.
 
 From the numbered candidate items you are given, select the ${TARGET_PICKS} MOST significant and genuinely newsworthy. Prefer substantive research results, real capability breakthroughs, major model/product releases, and robotics milestones. Demote incremental papers, promotional posts, opinion pieces, and anything not actually about frontier technology.
 

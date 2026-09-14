@@ -2,7 +2,7 @@
  * SSOT for every model id this app can call.
  *
  * Why a registry rather than "grep for it": on 2026-08-18 Groq removed
- * `llama-3.3-70b-versatile` and FleetCrown kept asking for it for eight days.
+ * `llama-3.3-70b-versatile` and Loki kept asking for it for eight days.
  * `npm run probe:models` already existed — the fleet's answer to the previous
  * FOUR pinned-model rots — but it probes the Loki CHAT chain and the vision
  * chain, and the id that died was `GROQ_FAST_MODEL`, which no probe covered.

@@ -32,19 +32,19 @@ async function main() {
       userId: DEFAULT_USER_ID,
       title: "God Mode — AI that runs your life",
       description:
-        "Build Ivy into a fully autonomous life OS. FleetCrown is the interface. Knowledge graph is the brain. Adapters are the senses. Then replicate it for others.",
+        "Build Ivy into a fully autonomous life OS. Loki is the interface. Knowledge graph is the brain. Adapters are the senses. Then replicate it for others.",
       status: "active",
       progress: 15,
       milestones: [
         { title: "Knowledge graph in Postgres", done: true },
-        { title: "FleetCrown v1 with 7 views", done: true },
+        { title: "Loki v1 with 7 views", done: true },
         { title: "Seed 1,300+ entities from contacts + knowledge", done: true },
         { title: "Email integration (Today view)", done: false },
         { title: "Goal tracking with progress", done: true },
         { title: "Ask Ivy button functional", done: false },
         { title: "Interaction tracking (who you talked to, when)", done: false },
         { title: "Proactive alerts (overdue, stale relationships)", done: false },
-        { title: "Set up FleetCrown for first other person", done: false },
+        { title: "Set up Loki for first other person", done: false },
       ],
     })
     .returning();
@@ -105,7 +105,7 @@ async function main() {
     progress: 50,
     milestones: [
       { title: "Contact resolver with 1,278 people", done: true },
-      { title: "People view in FleetCrown", done: true },
+      { title: "People view in Loki", done: true },
       { title: "Interaction tracking (last contact per person)", done: false },
       { title: "Relationship health alerts", done: false },
     ],
@@ -119,7 +119,7 @@ async function main() {
   await db.insert(schema.goals).values({
     userId: DEFAULT_USER_ID,
     parentGoalId: godMode.id,
-    title: "FleetCrown Phase 2 — write operations + email",
+    title: "Loki Phase 2 — write operations + email",
     description:
       "Add create/edit for goals and commitments. Integrate email-intel.py into Today view. Make Ask Ivy functional.",
     status: "active",
@@ -129,9 +129,8 @@ async function main() {
   await db.insert(schema.goals).values({
     userId: DEFAULT_USER_ID,
     parentGoalId: godMode.id,
-    title: "FleetCrown for others — productize",
-    description:
-      "Package FleetCrown as a self-hosted Docker app. Document setup. Find first beta user.",
+    title: "Loki for others — productize",
+    description: "Package Loki as a self-hosted Docker app. Document setup. Find first beta user.",
     status: "active",
     progress: 0,
   });

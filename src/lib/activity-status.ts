@@ -71,7 +71,7 @@ export function stripHarnessScaffolding(text: string): string {
 // human changelog entry. When a stored prompt IS that envelope, rendering it
 // verbatim buried the Activity timeline under three full copies of the
 // pipeline's guts. Detect it and collapse to the intent label instead.
-const OPERATOR_ENVELOPE = /#\s*FleetCrown operator dispatch/i;
+const OPERATOR_ENVELOPE = /#\s*Loki operator dispatch/i;
 export function isOperatorEnvelope(text: string): boolean {
   return OPERATOR_ENVELOPE.test(text.slice(0, 200));
 }
@@ -97,7 +97,7 @@ const ENVELOPE_BLOCK_PATTERNS: RegExp[] = [
   // Exit contract is always last and runs to the end of the dispatch.
   /\n?^##[ \t]*Exit contract\b[\s\S]*$/im,
   // Preamble: the heading plus its one explanatory paragraph (to a blank line).
-  /^#[ \t]*FleetCrown operator dispatch\b[^\n]*(?:\n(?!\s*$)[^\n]*)*/im,
+  /^#[ \t]*Loki operator dispatch\b[^\n]*(?:\n(?!\s*$)[^\n]*)*/im,
   // Heading-delimited background sections. They end at the next heading, or at
   // the prose-form "Project context & goals" header, whichever comes first.
   /^##[ \t]*The operator['\u2019]s goals & deadlines\b[\s\S]*?(?=\n#{1,3}[ \t]|\nProject context & goals\b|(?![\s\S]))/im,

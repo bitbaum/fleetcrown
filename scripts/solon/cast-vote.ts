@@ -1,6 +1,6 @@
 /**
  * Cast Loki's Bitcoin-signed vote on a Solon session — from this box, with
- * this system's own key. A vote cast here is FleetCrown's attested judgment;
+ * this system's own key. A vote cast here is Loki's attested judgment;
  * the private key never leaves the environment.
  *
  * v1 casts are operator-run. A future autonomous path stays behind the

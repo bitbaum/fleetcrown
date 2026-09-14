@@ -3,7 +3,7 @@ import { PROJECT_ATTR } from "@/config/project-attrs";
 
 export interface OrangeCatBuildIntent {
   iss: "orangecat";
-  aud: "fleetcrown";
+  aud: "loki";
   sub: string;
   jti: string;
   iat: number;
@@ -44,7 +44,7 @@ export function describeClient(intent: Pick<OrangeCatBuildIntent, "owner">): str
       owner.stewardUsername
         ? `Contact until then: @${owner.stewardUsername} on OrangeCat, who set the page up.`
         : "Contact until then: the person who set the page up on OrangeCat.",
-      "Once a site exists, the client steers changes through the FleetCrown feedback widget on it — no FleetCrown account needed.",
+      "Once a site exists, the client steers changes through the Loki feedback widget on it — no Loki account needed.",
     ];
   }
   return [`Client: ${who}${owner.kind === "group" ? " (a group)" : ""}.`];
@@ -55,7 +55,7 @@ function decode(segment: string): unknown {
 }
 
 export function verifyOrangeCatBuildIntent(token: string): OrangeCatBuildIntent {
-  const secret = process.env.FLEETCROWN_BUILD_INTENT_SECRET;
+  const secret = process.env.LOKI_BUILD_INTENT_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error("OrangeCat build handoff is not configured");
   }
@@ -74,7 +74,7 @@ export function verifyOrangeCatBuildIntent(token: string): OrangeCatBuildIntent 
   if (
     headerValue.alg !== "HS256" ||
     payload.iss !== "orangecat" ||
-    payload.aud !== "fleetcrown" ||
+    payload.aud !== "loki" ||
     !payload.jti ||
     !payload.sub ||
     payload.exp <= now ||
@@ -96,7 +96,7 @@ export function verifyOrangeCatBuildIntent(token: string): OrangeCatBuildIntent 
 }
 
 const SITE_BRIEF_NEXT_STEP =
-  "Turn the OrangeCat description into a website brief the client can read, then scaffold the site (fleetcrown: scripts/hetzner/new-site.sh <slug>) so the feedback widget reaches her from day one.";
+  "Turn the OrangeCat description into a website brief the client can read, then scaffold the site (loki: scripts/hetzner/new-site.sh <slug>) so the feedback widget reaches her from day one.";
 
 /** The fields the token states outright — no model, no guessing. */
 export function handoffAttributes(intent: OrangeCatBuildIntent): Record<string, string> {

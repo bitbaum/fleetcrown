@@ -8,7 +8,7 @@ import { decideHandoffMode, kickoffAutoHref } from "@/lib/integrations/orangecat
 interface ProjectOption {
   id: string;
   name: string;
-  fleetcrownPath: string;
+  lokiPath: string;
   repoUrl: string | null;
   dirPath: string | null;
   liveUrl: string | null;
@@ -33,7 +33,7 @@ export function OrangeCatBuildHandoff({
   // If a project with the exact same name already exists, default to linking
   // it instead of "new" — the whole point of offering a picker is defeated if
   // the obvious match still requires the user to notice and switch the radio
-  // themselves. "Bitbaum" on OrangeCat and "Bitbaum" on FleetCrown are almost
+  // themselves. "Bitbaum" on OrangeCat and "Bitbaum" on Loki are almost
   // certainly the same thing; proposing a second "Bitbaum" project by default
   // is exactly the duplicate this picker exists to prevent.
   const exactMatch = projects.find(
@@ -105,16 +105,16 @@ export function OrangeCatBuildHandoff({
         Say what this page IS before asking anything of the reader. They arrive
         from a button on another product, and the page opened by naming a
         project and demanding a choice — so someone who has not been told how
-        OrangeCat and FleetCrown relate has no way to answer it.
+        OrangeCat and Loki relate has no way to answer it.
       */}
       <header className="mb-8">
-        <div className="ui-public-eyebrow">OrangeCat → FleetCrown</div>
-        <h1 className="ui-public-page-title mt-3">Bring “{intent.entity.title}” into FleetCrown</h1>
+        <div className="ui-public-eyebrow">OrangeCat → Loki</div>
+        <h1 className="ui-public-page-title mt-3">Bring “{intent.entity.title}” into Loki</h1>
         <p className="ui-public-lede mt-4 max-w-2xl">
-          You came from a “Build it with FleetCrown” button on OrangeCat. OrangeCat is where a
-          project is made public, financed, and — in its Studio — where video, music, writing and
-          artwork get made; FleetCrown is where software gets built. This link carries the title and
-          description across so you do not retype them.
+          You came from a “Build it with Loki” button on OrangeCat. OrangeCat is where a project is
+          made public, financed, and — in its Studio — where video, music, writing and artwork get
+          made; Loki is where software gets built. This link carries the title and description
+          across so you do not retype them.
         </p>
         <ul className="mt-5 space-y-2 text-sm text-text-secondary">
           {autoBuilding ? (
@@ -122,8 +122,8 @@ export function OrangeCatBuildHandoff({
               <span aria-hidden>—</span>
               <span>
                 <strong className="font-medium text-text-primary">The build starts now.</strong>{" "}
-                FleetCrown creates the project, fills its profile, plans milestones, creates a
-                repository and puts an agent on it. No money moves and nothing is published.{" "}
+                Loki creates the project, fills its profile, plans milestones, creates a repository
+                and puts an agent on it. No money moves and nothing is published.{" "}
                 <a href={reviewHref} className="ui-public-link">
                   Prefer to choose where it lands first?
                 </a>
@@ -144,7 +144,7 @@ export function OrangeCatBuildHandoff({
                   <strong className="font-medium text-text-primary">
                     You choose where it lands
                   </strong>{" "}
-                  — a new FleetCrown project, or one you already have.
+                  — a new Loki project, or one you already have.
                 </span>
               </li>
             </>
@@ -210,15 +210,12 @@ export function OrangeCatBuildHandoff({
             <>
               <h2 className="text-lg font-semibold text-text-primary">Already connected</h2>
               <p className="mt-2 text-sm text-text-secondary">
-                “{intent.entity.title}” on OrangeCat is already connected to a FleetCrown project.
-                There is nothing to set up — this is what it is connected to.
+                “{intent.entity.title}” on OrangeCat is already connected to a Loki project. There
+                is nothing to set up — this is what it is connected to.
               </p>
               <ProjectConnections project={connected} orangeCatUrl={intent.entity.publicUrl} />
-              <a
-                href={connected.fleetcrownPath}
-                className="ui-btn-primary mt-6 w-full min-h-11 gap-2"
-              >
-                Open “{connected.name}” in FleetCrown
+              <a href={connected.lokiPath} className="ui-btn-primary mt-6 w-full min-h-11 gap-2">
+                Open “{connected.name}” in Loki
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </a>
             </>
@@ -233,9 +230,9 @@ export function OrangeCatBuildHandoff({
             <>
               <h2 className="text-lg font-semibold text-text-primary">Where should this live?</h2>
               <p className="mt-2 text-sm text-text-secondary">
-                In a <strong className="font-medium text-text-primary">FleetCrown project</strong> —
-                the workspace that briefs, tasks and agents hang off. It is not a code repository,
-                but it can point at one, at a folder on your machine, and at a live site.
+                In a <strong className="font-medium text-text-primary">Loki project</strong> — the
+                workspace that briefs, tasks and agents hang off. It is not a code repository, but
+                it can point at one, at a folder on your machine, and at a live site.
               </p>
 
               <div className="mt-5 space-y-3">
@@ -376,7 +373,7 @@ export function OrangeCatBuildHandoff({
  * The first version of this page named a project and stopped, so every option
  * read like a repository and none of them was one. Naming the absence in prose
  * ("no repo, no local checkout") was barely better: a reader who does not
- * already know what a FleetCrown project IS cannot verify a sentence. A row per
+ * already know what a Loki project IS cannot verify a sentence. A row per
  * connection — followed where it exists, explicitly empty where it does not,
  * with somewhere to go and fix it — is checkable without that knowledge.
  *
@@ -398,7 +395,7 @@ function ProjectConnections({
     ...(orangeCatUrl
       ? [{ label: "OrangeCat page", href: orangeCatUrl, text: `${project.name} on OrangeCat` }]
       : []),
-    { label: "FleetCrown project", href: project.fleetcrownPath, text: project.name },
+    { label: "Loki project", href: project.lokiPath, text: project.name },
     {
       label: "Code repository",
       href: project.repoUrl ?? undefined,
@@ -450,7 +447,7 @@ function ProjectConnections({
               <span className="text-text-muted">
                 {row.missing}
                 {" — "}
-                <a href={project.fleetcrownPath} className="ui-public-link">
+                <a href={project.lokiPath} className="ui-public-link">
                   add it
                 </a>
               </span>

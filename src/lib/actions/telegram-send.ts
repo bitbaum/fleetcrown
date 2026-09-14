@@ -7,7 +7,7 @@ const TELEGRAM_API = "https://api.telegram.org";
 /**
  * the operator's own Telegram chat id — the ONLY allowed recipient in the self-only phase.
  * Sourced through constants' envAlias, which reads APP_TELEGRAM_CHAT_ID /
- * FLEETCROWN_TELEGRAM_CHAT_ID / COCKPIT_TELEGRAM_CHAT_ID — never the bare
+ * LOKI_TELEGRAM_CHAT_ID / COCKPIT_TELEGRAM_CHAT_ID — never the bare
  * TELEGRAM_CHAT_ID, which is worth stating because setting the bare name
  * configures nothing and looks like it worked. Null when unset => no allowed
  * recipient => every send is blocked (fail-closed; we never guess a target).

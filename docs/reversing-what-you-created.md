@@ -1,6 +1,6 @@
 # Reversing what you created
 
-Creating a project in FleetCrown can produce five things that outlive the click:
+Creating a project in Loki can produce five things that outlive the click:
 a GitHub repository, a checkout on the box, a systemd service, a public address
 in Caddy, and a row in the apps register. Anything a product creates, it must be
 able to undo — otherwise "try it and see" is a trap. This is the map of what
@@ -20,7 +20,7 @@ undoes what, and what each step costs.
 Each destructive control is gated the same way: a plan first, then typing the
 project's own name. An armed button is a reflex; typing a name is a decision.
 
-## The one thing FleetCrown cannot do
+## The one thing Loki cannot do
 
 **It cannot delete a GitHub repository, and that is deliberate.** Neither the
 org token nor a user's OAuth grant asks for GitHub's `delete_repo` scope, so no
@@ -59,7 +59,7 @@ half-finished experiments are normal here.
 The cleanup, in full — **and the order matters**:
 
 ```bash
-# 1. the FleetCrown project FIRST, or the box puts the site back
+# 1. the Loki project FIRST, or the box puts the site back
 curl -X DELETE "$FC/api/projects/<entityId>?deleteLocal=1"   # or the UI
 
 # 2. on the box — service, files, vhost, port, register row, workflows
@@ -79,7 +79,7 @@ minutes later the journal read
 
     [box-prepare] cloning velokiosk-sep10 <- https://github.com/bitbaum/velokiosk-sep10
 
-and three of the six checkouts were back. A FleetCrown project that still names
+and three of the six checkouts were back. A Loki project that still names
 a `dirPath` is a standing instruction to restore it, so the site is only really
 gone once the project is. The repository outliving the checkout is what makes
 the resurrection possible, which is another reason the repo goes too.

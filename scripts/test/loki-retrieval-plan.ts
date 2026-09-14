@@ -264,7 +264,7 @@ async function main() {
       list_commitments: "commitments",
       list_pending_approvals: "approvals",
       list_notes: "captures",
-      // Not FleetCrown data: another agent's memory, reachable only by asking it.
+      // Not Loki data: another agent's memory, reachable only by asking it.
       // Exempt because there is no table to seed from, and its answer is labelled
       // an unverified second-hand report wherever it appears.
       ask_openclaw: "external",
@@ -305,6 +305,7 @@ async function main() {
         "why did we choose pgvector",
         "what could I build for someone",
         "list my projects",
+        "what do we have, name the three pillars",
         "zxcvbnm",
       ];
       const reached = new Set<string>();

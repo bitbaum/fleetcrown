@@ -1,7 +1,7 @@
 /**
  * Bootstrap drizzle's __drizzle_migrations ledger from existing schema state.
  *
- * Background — task #57: When FleetCrown moved to Hetzner (task #15) the
+ * Background — task #57: When Loki moved to Hetzner (task #15) the
  * schema was applied via `drizzle-kit push` (one-shot diff-and-apply).
  * That doesn't write to the `drizzle.__drizzle_migrations` ledger. As a
  * result the ledger table doesn't exist, and `drizzle-kit migrate` would

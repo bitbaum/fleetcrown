@@ -68,9 +68,9 @@ const KNOWN_GAPS: Record<string, string> = {
     "Declared in .env.example but NOT set on the box (verified 2026-09-04), so " +
     "server and browser both fall back to the same default. Harmless until " +
     "someone sets it in prod — at which point this entry should be closed.",
-  NEXT_PUBLIC_FLEETCROWN_ORANGECAT_PROJECT_ID: "Same as NEXT_PUBLIC_ORANGECAT_PROJECT_ID above.",
+  NEXT_PUBLIC_LOKI_ORANGECAT_PROJECT_ID: "Same as NEXT_PUBLIC_ORANGECAT_PROJECT_ID above.",
   NEXT_PUBLIC_ORANGECAT_URL: "Same shape — unset on the box; both sides use the compiled default.",
-  NEXT_PUBLIC_FLEETCROWN_URL: "Same shape — unset on the box; both sides use the compiled default.",
+  NEXT_PUBLIC_LOKI_URL: "Same shape — unset on the box; both sides use the compiled default.",
   NEXT_PUBLIC_SOLON_URL: "Same shape — unset on the box; both sides use the compiled default.",
 };
 
@@ -121,7 +121,7 @@ const handedToBuild = new Set([...fromWorkflow, ...fromNextConfig]);
  * to the same default and agree. The divergence only exists when the RUNTIME
  * sets something the BUILD did not inline.
  *
- * Measured on the box 2026-09-04, `/opt/fleetcrown/app/.env` sets exactly one:
+ * Measured on the box 2026-09-04, `/opt/loki/app/.env` sets exactly one:
  * NEXT_PUBLIC_VAPID_PUBLIC_KEY. Which is precisely the one that broke.
  *
  * CI cannot read the box, so use the repo's own declaration of what a

@@ -35,6 +35,7 @@ import {
   PROJECT_CUES,
   RECENCY_CUES,
   RUN_CUES,
+  FLEET_MAP_CUES,
 } from "@/lib/agent/cues";
 
 /** Every source the seed builder knows how to fetch. */
@@ -55,6 +56,7 @@ export const SOURCE_IDS = [
   "knowledge",
   "economy",
   "projects",
+  "fleet_map",
 ] as const;
 export type SourceId = (typeof SOURCE_IDS)[number];
 
@@ -101,6 +103,8 @@ export const SOURCE_LIMITS: Record<SourceId, { lead: number; background: number 
   // every Groq window and forced it onto a vendor whose daily quota was spent.
   // Background context that crowds out the subject is not context, it is cost.
   projects: { lead: 40, background: 10 },
+  // One fact: the whole studio map as one overview block (lead only).
+  fleet_map: { lead: 1, background: 0 },
 };
 
 /**
@@ -156,6 +160,13 @@ export function planRetrieval(message: string): RetrievalPlan {
   }
   if (PEOPLE_CUES.test(m)) push("people");
   if (ECONOMY_CUES.test(m)) push("economy");
+  // The studio map leads any fleet-shaped question, before the per-project
+  // rows: the shape of the whole is the answer, the rows are the detail. Tested
+  // before KNOWLEDGE: "what is loki for" is a map question, not an essay hunt.
+  if (FLEET_MAP_CUES.test(m)) {
+    push("fleet_map");
+    push("projects");
+  }
   if (KNOWLEDGE_CUES.test(m)) push("knowledge");
   if (PROJECT_CUES.test(m)) push("projects");
 
@@ -224,6 +235,8 @@ const TOOLS_FOR_SOURCE: Record<SourceId, readonly string[]> = {
   knowledge: ["search_knowledge"],
   economy: [],
   projects: ["list_projects"],
+  // The map is a computed view (register + profiles + runs); no tool reads it.
+  fleet_map: [],
 };
 
 /**

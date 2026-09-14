@@ -1,5 +1,5 @@
 /**
- * Fact adapters for the FLEET side of FleetCrown: what visitors reported, what
+ * Fact adapters for the FLEET side of Loki: what visitors reported, what
  * the agents did with it, which agents are working right now, what is alarming,
  * and the one-line pulse that ties them together.
  *
@@ -136,7 +136,7 @@ export async function sessionFacts(userId: string): Promise<Fact[]> {
   );
 }
 
-/** Open alerts — what FleetCrown itself flagged and the operator has not dismissed. */
+/** Open alerts — what Loki itself flagged and the operator has not dismissed. */
 export async function alertFacts(userId: string, limit: number): Promise<Fact[]> {
   const rows = await getActiveAlerts(userId).catch(() => []);
   return rows.slice(0, limit).map((a) =>

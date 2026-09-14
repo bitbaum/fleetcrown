@@ -18,7 +18,7 @@ message; test runs (`ALERT_DRY_RUN=1`) never deliver.
 | What arrives | Trigger | Source |
 |---|---|---|
 | 📨 New visitor feedback (project, excerpt, link to inbox) | A genuine visitor submits the feedback form (`POST /api/feedback`; AI/synthesizer filings stay silent) | `src/lib/feedback/notify-new.ts` |
-| ✅ A fix reached the live site, or 🚨 a merged fix failed to deploy (project, the visitor's words, the pull request, the live page) | The fix ledger sees a run's pull request TRANSITION into deployed or deploy-failed while the inbox is read — once per fix, never on re-reads. Says when FleetCrown merged it automatically, because that is the fact an operator needs to keep trusting the switch | `src/lib/feedback/notify-shipped.ts` |
+| ✅ A fix reached the live site, or 🚨 a merged fix failed to deploy (project, the visitor's words, the pull request, the live page) | The fix ledger sees a run's pull request TRANSITION into deployed or deploy-failed while the inbox is read — once per fix, never on re-reads. Says when Loki merged it automatically, because that is the fact an operator needs to keep trusting the switch | `src/lib/feedback/notify-shipped.ts` |
 | Run outcome: what an agent run concluded (root cause → action → remains) | An orchestration run with `notifyOnClose` closes — includes every incident-dispatch remediation run | `src/lib/orchestration/notify-close.ts`, `src/lib/orchestration/gate-and-close.ts` |
 | Morning brief, evening wrap, weekly reflection, Monday digest, email deadlines, financial scan, life scorecard | Loki's scheduled jobs — schedules live in their own SSOT: `/home/openclaw/.openclaw/cron/jobs.json` on bitbaum (edit via Loki, not here) | off-repo: OpenClaw cron |
 
@@ -32,15 +32,16 @@ message; test runs (`ALERT_DRY_RUN=1`) never deliver.
 | 💾 DISK / 🧠 MEM / 🐘 POSTGRES transitions | Resource crosses its hysteresis band on the box | `scripts/hetzner/install-host-alerts.sh` (host-check.sh) |
 | 🔴 DOWN: \<app\> (\<url\>) → HTTP \<code\> / ✅ RECOVERED (on-box) | An app URL in targets.conf stops answering | `scripts/hetzner/install-watchdog.sh` (watch.sh; also the external dead-man's-switch ping) |
 | 🔴 DOWN: \<app\> (\<detail\>) / ✅ RECOVERED: \<app\> (off-box) | GitHub-side health sweep of every registered app — still reports when bitbaum itself is dead | `.github/workflows/fleet-uptime.yml` (probe: `scripts/hetzner/uptime-sweep.sh`) |
-| 🚨 FleetCrown deploy: \<failure/rollback\> | A fleetcrown deploy fails or rolls back | `scripts/deploy-hetzner.sh` |
+| 🚨 Loki deploy: \<failure/rollback\> | A loki deploy fails or rolls back | `scripts/deploy-hetzner.sh` |
 | 🧩 \<app\>: \<runtime conformance finding\> | Deployed reality diverges from the register (wrong port, dead tunnel, inactive unit) | `scripts/hetzner/install-runtime-conformance.sh` |
 | 🧪 \<provider/model\>: \<n\> failure(s) in 24h | A model link keeps failing while the fallback chain hides it — Groq answered 400 to every structured Cat call for days and nothing said so | `scripts/hetzner/ai-provider-check.sh` (installed by `scripts/hetzner/install-ai-provider-watch.sh`) |
+| 🔑 builder auth DISABLED / 🔌 builder probe got no answer / ✅ RECOVERED | Hourly probe runs Claude Code with the box-runner’s own token; the token dies with the Claude account that minted it and every dispatch then hangs silently (2026-09-14) | `scripts/hetzner/builder-auth-check.sh` (installed by `scripts/hetzner/install-builder-auth-watch.sh`) |
 | 🚫/🧟 agent-work findings | Hourly sweep finds stranded/zombie agent work on the box | `scripts/hetzner/agent-work-check.sh` (installed by `scripts/hetzner/install-agent-work-watch.sh`) |
 | 🧹/🚨 DISK GC non-routine outcome | GC ran but the disk is still above the warn mark, or nothing was reclaimable (routine success is journal-only) | `scripts/hetzner/install-disk-gc.sh` |
 | Fleet refs audit findings | Deployed refs diverge from expected across the fleet | `scripts/hetzner/install-fleet-refs-audit.sh` |
 | ✗ register check findings | Daily 09:15 (laptop): committed apps.conf register vs reality — at most one message per finding per day | `scripts/local/fleet-register-check` |
 
-## FleetCrown self-checks (the platform watching itself)
+## Loki self-checks (the platform watching itself)
 
 | What arrives | Trigger | Source |
 |---|---|---|

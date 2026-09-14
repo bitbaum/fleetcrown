@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
  * mission-control card; compact variant fits inline toolbars.
  */
 const MODE_TOOLTIP: Record<AutoInjectMode, string> = {
-  off: "Fleet paused — FleetCrown dispatches nothing. Click to start building: agents work through each project's queue, then pick the next-best task automatically.",
-  on: "Fleet building — when an agent finishes, FleetCrown sends the next queued instruction (or picks the next-best task if the queue is empty). Click to pause all dispatching.",
+  off: "Fleet paused — Loki dispatches nothing. Click to start building: agents work through each project's queue, then pick the next-best task automatically.",
+  on: "Fleet building — when an agent finishes, Loki sends the next queued instruction (or picks the next-best task if the queue is empty). Click to pause all dispatching.",
 };
 
 export function AutomationPolicyControl({

@@ -7,7 +7,7 @@ import { INVESTOR_DETAILS } from "@/config/marketing-content";
 
 export const metadata = {
   title: "Support",
-  description: "Get help with FleetCrown — docs, GitHub issues, email — or fund the work directly.",
+  description: "Get help with Loki — docs, GitHub issues, email — or fund the work directly.",
 };
 
 // The nav says "Support", so getting help comes first. Funding the work is a
@@ -24,7 +24,7 @@ const helpChannels = [
   {
     title: "GitHub issues",
     body: "Found a bug or a missing behavior? File it where the fleet actually picks work up.",
-    href: "https://github.com/bitbaum/fleetcrown/issues",
+    href: "https://github.com/bitbaum/loki/issues",
     cta: "Open an issue",
     external: true,
     icon: Bug,
@@ -41,9 +41,9 @@ const helpChannels = [
 
 const supportTargets = [
   {
-    title: "FleetCrown",
+    title: "Loki",
     body: "Fund the production layer: Loki, supervised agent fleets, and tools that turn intentions into working systems.",
-    href: ECOSYSTEM_LINKS.fleetCrown,
+    href: ECOSYSTEM_LINKS.loki,
     icon: Bot,
   },
   {

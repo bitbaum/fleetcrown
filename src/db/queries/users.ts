@@ -117,7 +117,7 @@ export async function setUserOrangeCatActorId(id: string, orangecatActorId: stri
   await db.update(users).set({ orangecatActorId, updatedAt: new Date() }).where(eq(users.id, id));
 }
 
-/** Map an OrangeCat actor id → the FleetCrown user. The entitlement webhook uses
+/** Map an OrangeCat actor id → the Loki user. The entitlement webhook uses
  *  this to resolve which account a Bitcoin payment on OC belongs to. */
 export async function getUserByOrangeCatActorId(orangecatActorId: string) {
   return db.query.users.findFirst({ where: eq(users.orangecatActorId, orangecatActorId) }) ?? null;

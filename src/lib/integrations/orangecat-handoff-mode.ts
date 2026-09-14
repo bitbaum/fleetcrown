@@ -1,12 +1,12 @@
 /**
- * What the OrangeCat → FleetCrown build handoff does on arrival.
+ * What the OrangeCat → Loki build handoff does on arrival.
  *
  * The default is to build: consume the intent, create the project, and land on
  * it with the kickoff already running (profile → milestones → repository →
- * agent). That is the one click the "Build it with FleetCrown" button
+ * agent). That is the one click the "Build it with Loki" button
  * promises. Two cases must NOT auto-create:
  *
- *   - `connected`: this entity already has a FleetCrown project. Creating a
+ *   - `connected`: this entity already has a Loki project. Creating a
  *     second one is the duplicate the picker exists to prevent; open the one
  *     that exists.
  *   - `exactMatch`: a project with the same name exists but is not linked.

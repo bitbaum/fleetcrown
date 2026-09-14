@@ -1,9 +1,9 @@
 /**
  * Fleet Runner agent-token store — SSOT.
  *
- * The Bearer token Fleet Runner uses to authenticate against the FleetCrown
+ * The Bearer token Fleet Runner uses to authenticate against the Loki
  * control plane lives in a single file on disk:
- *   ~/.config/fleetcrown/fleet-runner-token
+ *   ~/.config/loki/fleet-runner-token
  *
  * Pre-2026-06-06 that path + the read-and-trim load logic were copy-pasted in
  * three places: `poller.ts` (drains pending_commands), `pusher.ts` (heartbeat
@@ -28,7 +28,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 
-const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
+const CONFIG_DIR = join(homedir(), '.config', 'loki')
 const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
 
 /** Absolute path to the token file — exposed for IPC `get-config-dir` etc. */
@@ -64,7 +64,7 @@ export function saveToken(token: string): { ok: true } | { ok: false; error: str
   }
 }
 
-/** True when a non-default control-plane URL is in effect (FLEETCROWN_WEB_URL
+/** True when a non-default control-plane URL is in effect (LOKI_WEB_URL
  *  set — dev, preview, or a localhost build). The token file is SHARED across
  *  every Fleet Runner instance on this machine, including the user's real
  *  production app. A 401 from a dev/preview server only means "this token isn't
@@ -73,7 +73,7 @@ export function saveToken(token: string): { ok: true } | { ok: false; error: str
  *  the production runner that shares this file. The default-URL (production)
  *  build still clears, so its auto-mint recovery path is unchanged. */
 export function isDevBaseOverride(): boolean {
-  return !!(process.env.FLEETCROWN_WEB_URL || '').trim()
+  return !!(process.env.LOKI_WEB_URL || '').trim()
 }
 
 /** Delete the saved token. No-ops when the file is already absent, so it's

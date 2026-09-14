@@ -28,15 +28,15 @@
 // - Short, memorable slug; works as wordmark + icon; easy to say/spell.
 // - Supports hybrid (local Runner + remote command) story.
 // See docs/branding-design.md for the full rationale, name selection criteria,
-// visual identity rules, and why FleetCrown was selected/stuck with over
+// visual identity rules, and why Loki was selected/stuck with over
 // alternatives (including recent .com-available "shade/shady fleet" proposals
 // like shadefleet.com / shadyfleet.com, and especially fleetclown.com — the
 // latter rejected as the worst possible inversion of "crown"/command/serious
 // infrastructure tone).
 
-export const APP_NAME = "FleetCrown";
-export const APP_SLUG = "fleetcrown";
-export const APP_DOMAIN = "fleetcrown.orangecat.ch";
+export const APP_NAME = "Loki";
+export const APP_SLUG = "loki";
+export const APP_DOMAIN = "loki.orangecat.ch";
 export const APP_KICKER = "Personal Systems";
 export const APP_DESCRIPTION =
   "Command your agents, projects, and personal systems from one workspace.";
@@ -48,12 +48,12 @@ export const LOCAL_DEV_URL = "http://localhost:3000";
 
 // Bridge — the Hetzner SSE fan-out service that delivers fc:state events to
 // every connected browser, desktop, and phone. Hosted on the shared bitbaum
-// box at bridge.orangecat.ch (shared between FleetCrown + OrangeCat, see
+// box at bridge.orangecat.ch (shared between Loki + OrangeCat, see
 // memory:decision_hetzner_consolidation). Always HTTPS, always /sse path.
 //
 // Override per-runtime:
-//   - Web (Next.js):    NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL
-//   - Desktop (Node):   FLEETCROWN_BRIDGE_URL
+//   - Web (Next.js):    NEXT_PUBLIC_LOKI_BRIDGE_URL
+//   - Desktop (Node):   LOKI_BRIDGE_URL
 // Override use cases: pointing a dev instance at a local bridge (http://localhost:4001/sse)
 // during testing. Production never overrides — the constant below is the truth.
 export const BRIDGE_DOMAIN = "bridge.orangecat.ch";

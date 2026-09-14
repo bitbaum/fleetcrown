@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
       if (tg) {
         void sendTelegramMessage(
           tg,
-          `🚨 FleetCrown: ${broken} telemetry path(s) stopped recording.\n${detail}`,
+          `🚨 Loki: ${broken} telemetry path(s) stopped recording.\n${detail}`,
         );
       }
     }

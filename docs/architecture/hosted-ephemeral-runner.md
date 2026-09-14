@@ -1,7 +1,7 @@
 # Hosted Ephemeral Runner
 
 **Status:** Phase 0 + Hermes dispatch largely implemented (2026-06-30). Phase 1 (sandboxed coding agent) design complete; not the same path as box-runner owned-PTY.
-**Why:** FleetCrown commands a fleet it doesn't run — without a cloud builder, every project shows
+**Why:** Loki commands a fleet it doesn't run — without a cloud builder, every project shows
 "Offline · runner offline" when the laptop sleeps. The **box-runner** (owned PTY, interactive)
 and **Hermes runner** (sandboxed PR-mode) are complementary cloud executors. See
 `docs/architecture/box-owned-pty-executor.md` and `docs/architecture/priority-plan-2026-H2.md`.
@@ -30,7 +30,7 @@ The hosted runner does all four — the only difference from the Fleet Runner is
 
 ## The hard constraint: isolation
 
-The box (`fleetcrown-app` on Hetzner) also serves the public app, the bridge,
+The box (`loki-app` on Hetzner) also serves the public app, the bridge,
 and Ivy. **Never run an unsandboxed coding agent that writes code and runs
 shell on that box.** A prompt-injected or buggy agent there is a prod incident
 and, in multi-tenant mode, a cross-tenant breach. Every phase below is gated on

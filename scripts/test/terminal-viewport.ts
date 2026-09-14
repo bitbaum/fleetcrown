@@ -121,7 +121,7 @@ for (const geom of [
 // no such session, silently attached to "sbb-lost-found", and kept telling the
 // operator their keystrokes were going "straight to the session".
 
-const RUNNING = ["sbb-lost-found", "fleetcrown"];
+const RUNNING = ["sbb-lost-found", "loki"];
 
 eq(
   resolveTabAttachment({
@@ -146,21 +146,21 @@ eq(
 eq(
   resolveTabAttachment({
     requestedTab: "orangecat",
-    selected: "fleetcrown",
+    selected: "loki",
     tabs: RUNNING,
     loading: false,
   }),
-  { activeTab: "fleetcrown", deepLinkMiss: false },
+  { activeTab: "loki", deepLinkMiss: false },
   "picking a session from the miss state clears it",
 );
 eq(
   resolveTabAttachment({
-    requestedTab: "fleetcrown",
-    selected: "fleetcrown",
+    requestedTab: "loki",
+    selected: "loki",
     tabs: RUNNING,
     loading: false,
   }),
-  { activeTab: "fleetcrown", deepLinkMiss: false },
+  { activeTab: "loki", deepLinkMiss: false },
   "a deep link that hits attaches to what was asked for",
 );
 eq(

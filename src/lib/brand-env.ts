@@ -1,4 +1,4 @@
-// Brand-prefixed env-var resolver. Reads APP_<KEY> first, then FLEETCROWN_<KEY>
+// Brand-prefixed env-var resolver. Reads APP_<KEY> first, then LOKI_<KEY>
 // (current slug), then COCKPIT_<KEY> (legacy) for transition. Lets the app
 // rename its brand prefix without breaking machines that already export old
 // COCKPIT_*-prefixed variables.
@@ -7,7 +7,7 @@
 export function envAlias(key: string, fallback = ""): string {
   return (
     process.env[`APP_${key}`] ??
-    process.env[`FLEETCROWN_${key}`] ??
+    process.env[`LOKI_${key}`] ??
     process.env[`COCKPIT_${key}`] ??
     fallback
   );

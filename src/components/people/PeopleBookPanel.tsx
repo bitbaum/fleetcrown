@@ -235,7 +235,7 @@ export function PeopleBookPanel({
       {!open ? null : (
         <div className="space-y-4 border-t border-border-subtle p-4">
           <p className="text-sm text-text-secondary">
-            {ASSISTANT_STACK.fleetcrown.name} is the book. {ASSISTANT_STACK.loki.name} talks to it.{" "}
+            {ASSISTANT_STACK.loki.name} is the book and the assistant that talks to it.{" "}
             {ASSISTANT_STACK.openclaw.name} is the WhatsApp/Telegram workspace that filled most of
             these names. {ASSISTANT_STACK.hermes.name} is a task CLI — not a contact book. Nothing
             is sent.

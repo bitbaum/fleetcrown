@@ -4,7 +4,7 @@
  * Why this is worth testing: the whole feature rests on an asymmetry that is
  * invisible at a glance — the operator hands work out and accepts it back, but
  * only the person asked can say yes, say no, or claim it is done. If an
- * operator-side move ever gains `accepted`, FleetCrown starts recording consent
+ * operator-side move ever gains `accepted`, Loki starts recording consent
  * nobody gave, and it does so silently, on a board that looks correct. The same
  * goes the other way: an assignee move that could reach `done` would let the
  * person asked sign off their own work.
@@ -182,7 +182,7 @@ ok(formatSats(0.0005, BTC) === "50,000 sats", "sats are the unit people quote");
 ok(formatSats(0.0005, "CHF") === "", "francs are not satoshis");
 ok(formatSats(null, BTC) === "", "no fee, no sats line");
 // The list must stay exactly what OrangeCat's services API accepts: a currency
-// FleetCrown offers but OrangeCat rejects is a fee that cannot be mirrored.
+// Loki offers but OrangeCat rejects is a fee that cannot be mirrored.
 ok(TASK_CURRENCIES.includes(BTC), "BTC is assignable — paying a person is the point");
 for (const c of ["USD", "EUR", "CHF", "GBP", "BTC"]) {
   ok((TASK_CURRENCIES as readonly string[]).includes(c), `${c} matches OrangeCat's enum`);

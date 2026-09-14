@@ -4,7 +4,7 @@
  * The widget floats on other people's sites and cannot read our CSS
  * variables, so it needs concrete colour values — and for a while those were
  * typed by hand into src/lib/palette.ts, which is how it drifted into "does
- * not look like part of FleetCrown". Now the values are READ from
+ * not look like part of Loki". Now the values are READ from
  * @bitbaum/design-tokens/tokens.css (the fleet's design SSOT — see
  * fleet/AGENTS.md "Design") and written to src/lib/widget-theme.generated.ts.
  * A test regenerates and compares, so a token change that was not
@@ -13,7 +13,7 @@
  *   npx tsx scripts/generate-widget-theme.ts          # write
  *   npx tsx scripts/generate-widget-theme.ts --check  # exit 1 if stale
  *
- * The widget is FleetCrown's PUBLIC surface (the near-black the marketing
+ * The widget is Loki's PUBLIC surface (the near-black the marketing
  * pages sit on), so it takes --surface-public plus the `.dark` theme's text,
  * border and status scales. Fonts and radii come from the same file.
  */
@@ -106,7 +106,7 @@ export function buildWidgetTheme(css: string) {
     textSecondary: cssColorToConcrete(need(dark, "text-secondary")),
     textTertiary: cssColorToConcrete(need(dark, "text-tertiary")),
     textMuted: cssColorToConcrete(need(dark, "text-muted")),
-    /** --surface-public: the near-black FleetCrown's own pages sit on */
+    /** --surface-public: the near-black Loki's own pages sit on */
     surface: cssColorToConcrete(need(root, "surface-public")),
     surfaceRaised: cssColorToConcrete(need(dark, "surface-page")),
     surfaceSubtle: cssColorToConcrete(need(dark, "surface-hover")),

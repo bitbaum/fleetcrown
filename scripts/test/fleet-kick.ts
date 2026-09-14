@@ -28,8 +28,8 @@ function testDevelopAllFleetPhrases() {
   assert.equal(isDevelopAllFleetRequest("develop all my projects"), true);
   assert.equal(isDevelopAllFleetRequest("build the whole fleet"), true);
   assert.equal(isDevelopAllFleetRequest("start every project"), true);
-  assert.equal(isDevelopAllFleetRequest("code review for fleetcrown"), false);
-  assert.equal(isDevelopAllFleetRequest("next best for fleetcrown"), false);
+  assert.equal(isDevelopAllFleetRequest("code review for loki"), false);
+  assert.equal(isDevelopAllFleetRequest("next best for loki"), false);
 }
 
 function testDispatchTargets() {
@@ -64,11 +64,11 @@ function testDispatchTargets() {
 
 function testScreenshotDispatch() {
   assert.equal(
-    shouldDispatchScreenshot("What's wrong here and what should we change?", true, "fleetcrown"),
+    shouldDispatchScreenshot("What's wrong here and what should we change?", true, "loki"),
     true,
   );
-  assert.equal(shouldDispatchScreenshot("implement this ui", true, "fleetcrown"), true);
-  assert.equal(shouldDispatchScreenshot("what do you think?", true, "fleetcrown"), false);
+  assert.equal(shouldDispatchScreenshot("implement this ui", true, "loki"), true);
+  assert.equal(shouldDispatchScreenshot("what do you think?", true, "loki"), false);
   assert.equal(shouldDispatchScreenshot("implement this", true, null), false);
   assert.equal(isDefaultVisionQuestion("What's wrong here and what should we change?"), true);
   assert.equal(isScreenshotImplementIntent("please implement the layout"), true);

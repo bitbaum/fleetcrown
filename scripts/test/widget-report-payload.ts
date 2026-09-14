@@ -1,6 +1,6 @@
 // The report payload must never lose the part that makes a report routable.
 //
-// window.FleetCrown.report() lets a host page file a bug with the error already
+// window.Loki.report() lets a host page file a bug with the error already
 // described and the machine-readable context attached. The ingest caps
 // `suggestion` at 2000 chars, so prose and diagnostics compete for one budget.
 // The rule this file pins down: diagnostics are budgeted FIRST. A clipped

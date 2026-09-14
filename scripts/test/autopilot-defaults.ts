@@ -102,8 +102,8 @@ function runTests(): void {
       "useAutomationPolicy must not default to off before settings load",
     );
     assert(
-      /FLEETCROWN_REFRESH_EVENT/.test(hook),
-      "useAutomationPolicy must refetch on FLEETCROWN_REFRESH_EVENT",
+      /LOKI_REFRESH_EVENT/.test(hook),
+      "useAutomationPolicy must refetch on LOKI_REFRESH_EVENT",
     );
   });
 

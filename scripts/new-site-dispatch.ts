@@ -14,8 +14,8 @@
  * This queues four validated fields that reach an audited script as an argument
  * vector — nothing here can become shell syntax or an instruction.
  *
- * The runner that drains it must be armed (FLEETCROWN_SITE_FACTORY=1) and told
- * where the script lives (FLEETCROWN_NEW_SITE_SCRIPT). A runner without both
+ * The runner that drains it must be armed (LOKI_SITE_FACTORY=1) and told
+ * where the script lives (LOKI_NEW_SITE_SCRIPT). A runner without both
  * reports the refusal on the command instead of doing anything.
  *
  * Usage:
@@ -35,7 +35,7 @@ async function main() {
 
   const target = await getSelfImprovementTarget();
   if (!target) {
-    console.error("No FleetCrown owner resolved — nothing to dispatch for.");
+    console.error("No Loki owner resolved — nothing to dispatch for.");
     process.exit(1);
   }
 
@@ -53,7 +53,7 @@ async function main() {
     `  Drained by the hosted runner — repo → register → box → deploy. Minutes, not seconds.`,
   );
   console.log(
-    `  Watch:  journalctl -u fleetcrown-hosted-runner -f    |    Activity (source=hosted-runner)`,
+    `  Watch:  journalctl -u loki-hosted-runner -f    |    Activity (source=hosted-runner)`,
   );
   process.exit(0);
 }

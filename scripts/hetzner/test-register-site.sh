@@ -20,7 +20,7 @@ printf 'old-app|4010|old.example.com|/nowhere/old|.|-|bitbaum|product|live|-|-|-
 touch "$TMP/key"
 
 run_dry() {
-  DEV_ROOT="$TMP/dev" FLEETCROWN_REPO_ROOT="$TMP/fc" DEPLOY_KEY_PATH="$TMP/key" SITES_BASE_DOMAIN=example.com \
+  DEV_ROOT="$TMP/dev" LOKI_REPO_ROOT="$TMP/fc" DEPLOY_KEY_PATH="$TMP/key" SITES_BASE_DOMAIN=example.com \
     bash "$TMP/rel/register-site.sh" "$@" --dry-run 2>&1
 }
 

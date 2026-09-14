@@ -78,7 +78,7 @@ listening_ports() {
 
 # -n: don't consume stdin (box() is used inside while-read loops)
 # -i: the deploy key when it is readable. On the box itself these scripts run
-# as ubuntu from inside fleetcrown-app (register-cd), and ubuntu's only private
+# as ubuntu from inside loki-app (register-cd), and ubuntu's only private
 # key is the CI deploy key — whose public half is what authorizes CI. Without
 # naming it, ssh offers nothing and the box refuses itself ("Permission denied
 # (publickey)"), which is how sync-infra failed on velokiosk-sep10.

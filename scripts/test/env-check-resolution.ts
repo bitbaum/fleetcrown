@@ -9,7 +9,7 @@
  *
  * Found 2026-08-27. `checkEnv()` warned on the bare `TELEGRAM_CHAT_ID`, while
  * every consumer reads it through `envAlias`, which looks ONLY at APP_ /
- * FLEETCROWN_ / COCKPIT_ prefixes and never the bare name. In production
+ * LOKI_ / COCKPIT_ prefixes and never the bare name. In production
  * APP_TELEGRAM_CHAT_ID was set and delivery worked (confirmed live with a
  * read-only getChat) — so the warning fired at every boot for nothing, 48 of
  * that week's 231 warnings, on a surface carrying six real errors underneath.

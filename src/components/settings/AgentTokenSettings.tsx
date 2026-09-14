@@ -187,7 +187,7 @@ export function AgentTokenSettings() {
               1. Inside Fleet Runner + auto-pair succeeded → confirmation chip.
               2. Inside Fleet Runner + auto-pair failed → "Retry" button.
               3. In a regular browser → deep-link to hand the token to the
-                 desktop app via the fleetcrown:// protocol. */}
+                 desktop app via the loki:// protocol. */}
           {insideFleetRunner && autoPaired?.tokenId === revealed.id ? (
             <div className="self-start inline-flex items-center gap-1.5 rounded-md bg-status-positive-subtle px-3 py-1.5 text-xs text-status-positive">
               <Cpu className="h-3.5 w-3.5" />
@@ -230,7 +230,7 @@ export function AgentTokenSettings() {
           ) : (
             <>
               <a
-                href={`fleetcrown://auth?token=${encodeURIComponent(revealed.token)}`}
+                href={`loki://auth?token=${encodeURIComponent(revealed.token)}`}
                 className="ui-btn-primary self-start gap-1.5 text-xs"
               >
                 <ExternalLink className="h-3.5 w-3.5" />

@@ -61,7 +61,7 @@ export async function publishRobotAsset(
       return { assetId: robot.orangecatAssetId, published: true };
     }
     const asset = await client.assets.create(body as Parameters<typeof client.assets.create>[0], {
-      idempotencyKey: `fleetcrown_robot_${robot.id}`,
+      idempotencyKey: `loki_robot_${robot.id}`,
     });
     await upsertEntityAttribute(userId, robot.id, ROBOT_ATTR.ORANGECAT_ASSET_ID, asset.id);
     return { assetId: asset.id, published: true };

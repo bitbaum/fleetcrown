@@ -1,7 +1,7 @@
 /**
  * Bridge SSE subscriber for the desktop main process.
  *
- * Opens a long-lived connection to the FleetCrown event bridge (Hetzner-hosted
+ * Opens a long-lived connection to the Loki event bridge (Hetzner-hosted
  * Postgres LISTEN → SSE fanout) and watches for pending_commands INSERT
  * events. When one fires for our user, we wake the long-poll loop via the
  * supplied callback so the queued command drains in <500ms instead of waiting
@@ -74,7 +74,7 @@ interface Handle {
 // bridge) → BRIDGE_URL constant from brand.ts (production). Same precedence
 // the web client uses; see src/lib/event-stream.ts.
 function resolveBridgeUrl(): string {
-  const override = (process.env.FLEETCROWN_BRIDGE_URL ?? '').trim()
+  const override = (process.env.LOKI_BRIDGE_URL ?? '').trim()
   return override.length > 0 ? override : BRIDGE_URL
 }
 
@@ -136,7 +136,7 @@ export function startBridgeSubscriber(
     // open the same bridge without this flag and must NOT flip the badge.
     // See docs/architecture/connection-presence.md.
     sseUrl.searchParams.set('client', 'runner')
-    const presenceChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+    const presenceChannel = (process.env.LOKI_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
     if (presenceChannel === 'cloud' || presenceChannel === 'local') {
       sseUrl.searchParams.set('channel', presenceChannel)
     }
@@ -247,7 +247,7 @@ export function startBridgeSubscriber(
       if (!data) return
       try {
         const ev = JSON.parse(data) as { ch?: string }
-        const myChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+        const myChannel = (process.env.LOKI_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
         if (ev.ch && (ev.ch === 'cloud' || ev.ch === 'local') && myChannel !== ev.ch) return
         if (eventType === 'rawkey') callbacks.onRawKey?.(ev as RawKeyEvent)
         else callbacks.onResize?.(ev as ResizeEvent)

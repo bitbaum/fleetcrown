@@ -34,7 +34,7 @@ export async function getHeroFleetSnapshot(userId: string): Promise<HeroFleetSna
   const runningByKey = new Map(states.map((s) => [s.projectKey.toLowerCase(), s.agentRunning]));
 
   // Feature flagships first, then fill — so the rows lead with what matters.
-  const FLAGSHIPS = ["fleetcrown", "orangecat"];
+  const FLAGSHIPS = ["loki", "orangecat"];
   const ordered = [...publicProjects].sort((a, b) => {
     const ai = FLAGSHIPS.indexOf(a.name.toLowerCase());
     const bi = FLAGSHIPS.indexOf(b.name.toLowerCase());

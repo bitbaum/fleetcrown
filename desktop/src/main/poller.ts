@@ -1,19 +1,19 @@
 /**
  * Fleet Runner main-process poller.
  *
- * Long-polls the FleetCrown control plane for commands queued by the web
+ * Long-polls the Loki control plane for commands queued by the web
  * (`pending_commands` rows from `executeInject`'s remote branch) and executes
  * them locally into the agent's owned PTY.
  * This is the cable that closes the loop: a user dispatches from any browser
  * or phone, the row lands in Postgres, this poller drains it in <1s, the prompt
  * fires into the user's Zellij pane.
  *
- * Protocol (already proven by scripts/fleetcrown-daemon.sh):
+ * Protocol (already proven by scripts/loki-daemon.sh):
  *   GET   /api/control/commands?wait=25   →  { command: { id, type, payload } | null }
  *   PATCH /api/control/commands/<id>      ←  { ok: boolean, error?, text? }
  *
  * Auth: Bearer <token> where <token> is the ck_… string created from
- * Settings → Agent tokens (and saved here at ~/.config/fleetcrown/fleet-runner-token).
+ * Settings → Agent tokens (and saved here at ~/.config/loki/fleet-runner-token).
  *
  * The desktop poller handles the same core command set as the bash daemon:
  * inject, focus/close tab, launch/switch agent, auto-continue, and install
@@ -112,7 +112,7 @@ const COMMAND_POLL_IDLE_MS = 2_000
 const POLL_FETCH_TIMEOUT_MS = 20_000
 let currentStatus: PollerStatus = {
   state: 'idle',
-  baseUrl: (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL,
+  baseUrl: (process.env.LOKI_WEB_URL || '').trim() || APP_URL,
   lastPollAt: null,
   lastErrorAt: null,
   lastError: null,
@@ -133,7 +133,7 @@ let bridgeHandle: { stop: () => void } | null = null
 let pendingWake = false
 
 function runnerPresenceChannel(): 'cloud' | 'local' | null {
-  const raw = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+  const raw = (process.env.LOKI_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
   return raw === 'cloud' || raw === 'local' ? raw : null
 }
 
@@ -524,7 +524,7 @@ async function handleCommand(
         // so the cloud/UI learns the real outcome instead of a fake ok.
         const { tab, dir, agent, model, prompt, runId, sessionId } = validation.command.payload
         assertKnownLaunchAgent(agent)
-        // Worktree-per-agent (opt-in via FLEETCROWN_WORKTREE_DISPATCH): a FRESH
+        // Worktree-per-agent (opt-in via LOKI_WORKTREE_DISPATCH): a FRESH
         // dispatch launch runs in its own git worktree so it can never collide
         // with the primary checkout or another agent on a shared index/HEAD
         // (the `git add -A` swallow, 2026-07-17). Injecting into an already-live
@@ -543,7 +543,7 @@ async function handleCommand(
         }
         worktreeByTab.set(tab, { primaryDir: dir, launchDir: effDir })
         // A workspace that is not on this machine cannot be worked on here.
-        // The box clones on demand (FLEETCROWN_BOX_PREPARE); a laptop runner
+        // The box clones on demand (LOKI_BOX_PREPARE); a laptop runner
         // does not, and launching claude in a directory that does not exist
         // produced three "inject did not stick" failures for a box-rooted
         // project on 2026-09-10 while the box sat idle. Routing now keeps such
@@ -551,7 +551,7 @@ async function handleCommand(
         // command still arrives, so the ack names the real cause.
         if (
           !ptyAlreadyLive &&
-          process.env.FLEETCROWN_BOX_PREPARE !== 'true' &&
+          process.env.LOKI_BOX_PREPARE !== 'true' &&
           !fs.existsSync(effDir)
         ) {
           error = `workspace ${effDir} does not exist on this machine — the project lives on another builder; nothing was launched here`

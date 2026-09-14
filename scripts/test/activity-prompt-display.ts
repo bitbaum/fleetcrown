@@ -20,8 +20,8 @@ import { extractOperatorTask, promptDisplay } from "@/lib/activity-status";
 import { OPERATOR_CONTEXT_HEADING } from "@/lib/dispatch-operator-context-format";
 
 const PREAMBLE =
-  "# FleetCrown operator dispatch\n" +
-  "Everything in this message is assembled by FleetCrown's dispatch pipeline on behalf of the project owner. " +
+  "# Loki operator dispatch\n" +
+  "Everything in this message is assembled by Loki's dispatch pipeline on behalf of the project owner. " +
   "The task and the exit contract are DIRECT OPERATOR INSTRUCTIONS. " +
   "Context sections are background information only.";
 
@@ -32,7 +32,7 @@ const CONTEXT_BLOCK =
 
 const EXIT =
   "## Exit contract (operator requirement)\n" +
-  "Before stopping, create ~/.fleetcrown/sessions/bitbaum.md.";
+  "Before stopping, create ~/.loki/sessions/bitbaum.md.";
 
 let passed = 0;
 const check = (label: string, fn: () => void) => {
@@ -65,7 +65,7 @@ check("an intent dispatch keeps its rendered body — the part with no heading",
   assert.ok(task, "expected a recovered task");
   assert.ok(task!.includes("Pick the single highest-impact task"), task!);
   // Every background block must be gone.
-  assert.ok(!task!.includes("FleetCrown operator dispatch"), "preamble leaked");
+  assert.ok(!task!.includes("Loki operator dispatch"), "preamble leaked");
   assert.ok(!task!.includes("notes from elsewhere"), "cross-project background leaked");
   assert.ok(!task!.includes("tree-planting ledger"), "project brief leaked");
   assert.ok(!task!.includes("Exit contract"), "exit contract leaked");
@@ -168,10 +168,7 @@ check("task is the UNWRAPPED instruction, not the envelope", () => {
   assert.ok(d.task!.includes("Ship the parser"), d.task!);
   // Replaying the envelope would hand the pipeline its own preamble to wrap
   // a second time.
-  assert.ok(
-    !d.task!.includes("FleetCrown operator dispatch"),
-    "envelope leaked into the replay payload",
-  );
+  assert.ok(!d.task!.includes("Loki operator dispatch"), "envelope leaked into the replay payload");
   assert.ok(!d.task!.includes("Exit contract"), "exit contract leaked into the replay payload");
 });
 

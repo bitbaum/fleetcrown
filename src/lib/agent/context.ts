@@ -31,6 +31,7 @@ import {
   documentFacts,
   economyFacts,
   feedbackFacts,
+  fleetMapFacts,
   fleetStatusFacts,
   goalFacts,
   habitFacts,
@@ -85,6 +86,8 @@ async function fetchSource(
       return alertFacts(userId, limit);
     case "fleet_status":
       return fleetStatusFacts(userId);
+    case "fleet_map":
+      return fleetMapFacts();
     case "approvals":
       return pendingApprovalFacts(userId, limit);
     case "goals":

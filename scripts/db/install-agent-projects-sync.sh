@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Installs sync-agent-projects-conf.sh as a local systemd --user timer, so
-# ~/.config/agent-projects.conf stays in sync with the FleetCrown project
+# ~/.config/agent-projects.conf stays in sync with the Loki project
 # registry without anyone remembering to run it by hand. Idempotent — safe
 # to re-run (e.g. after the repo moves, or to pick up a schedule change).
 #
@@ -45,7 +45,7 @@ mkdir -p "$UNIT_DIR"
 
 cat > "$UNIT_DIR/agent-projects-sync.service" <<EOF
 [Unit]
-Description=Sync ~/.config/agent-projects.conf from FleetCrown's project registry
+Description=Sync ~/.config/agent-projects.conf from Loki's project registry
 After=network-online.target
 Wants=network-online.target
 
@@ -59,7 +59,7 @@ EOF
 
 cat > "$UNIT_DIR/agent-projects-sync.timer" <<'EOF'
 [Unit]
-Description=Periodic sync of agent-projects.conf from FleetCrown's project registry
+Description=Periodic sync of agent-projects.conf from Loki's project registry
 
 [Timer]
 OnBootSec=2m

@@ -1,6 +1,6 @@
 "use client";
 
-// Bulk-import GitHub repos as FleetCrown projects.
+// Bulk-import GitHub repos as Loki projects.
 //
 // Lives under /control/ so the AppShell + auth gate + onboarding redirect
 // behave consistently. Reached either from the /control empty state
@@ -66,8 +66,8 @@ export default function ImportFromGithubPage() {
             <div className="space-y-1">
               <h2 className="ui-page-subtitle">Pick the repos you want to manage</h2>
               <p className="text-sm text-text-muted">
-                Each selected repo becomes a FleetCrown project. You can import all of them now and
-                remove individual ones later — duplicates by name are silently skipped.
+                Each selected repo becomes a Loki project. You can import all of them now and remove
+                individual ones later — duplicates by name are silently skipped.
               </p>
             </div>
           </div>

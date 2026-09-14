@@ -65,6 +65,9 @@ export type InjectParams = {
   /** Push the close outcome to chat (Telegram). Set by chat-originated
    *  dispatches (Loki's fleet skill) — see lib/orchestration/notify-close.ts. */
   notifyOnClose?: boolean;
+  /** The Loki conversation this dispatch came from; the close outcome is
+   *  posted back into it. */
+  conversationId?: string;
   /** Claude's native session identity. Tabs remain transport only. */
   sessionId?: string;
 };
@@ -120,7 +123,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   const projectPath: string | null = dbMatch.dirPath ?? null;
   const projectId: string | null = dbMatch.entityProjectId ?? null;
 
-  // Is this project backed by a live FleetCrown-owned PTY (server-side launch)?
+  // Is this project backed by a live Loki-owned PTY (server-side launch)?
   // The executor registry is the SSOT — a live handle means we drive the agent's
   // stdin directly. No live workspace → there is no agent to type at, so the
   // prompt is queued as a dispatch below (cloud mode never has one; injectFn is
@@ -214,7 +217,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         closedAt: injectRow?.closedAt ? Math.floor(injectRow.closedAt.getTime() / 1000) : null,
       });
       // Adapter owns prompt enrichment: the claude seam appends
-      // ~/.fleetcrown/sessions/<tab>.md (identical to the prior buildPromptWithSession
+      // ~/.loki/sessions/<tab>.md (identical to the prior buildPromptWithSession
       // call); adapters without a session seam fall back to identity.
       const enrichPrompt =
         (await import("@/lib/orchestration/adapter-registry")).adapterFor(eventAdapter)
@@ -293,6 +296,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
           projectPath: resolvedProjectPath,
           model: eventModel,
           ...(params.notifyOnClose ? { notifyOnClose: true } : {}),
+          ...(params.conversationId ? { conversationId: params.conversationId } : {}),
         },
       });
       runId = run.id;

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
- * Shared HMAC verification for the OrangeCat → FleetCrown webhook rail.
+ * Shared HMAC verification for the OrangeCat → Loki webhook rail.
  *
  * Both receivers (/api/orangecat/entitlement and /api/orangecat/events) verify
  * the exact same way: OrangeCat signs the raw request body with the shared

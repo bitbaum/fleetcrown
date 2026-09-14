@@ -1,4 +1,4 @@
-# Operating contract — agents running on the FleetCrown box
+# Operating contract — agents running on the Loki box
 
 You are running on the always-on box (bitbaum), not on the operator's laptop.
 Everything below follows from that one fact.
@@ -29,8 +29,11 @@ Never end a session reporting success on work that never left this machine.
 
 Create a branch before your first commit. Never commit directly to `main` /
 `master`, never force-push, never delete branches you did not create, and never
-merge your own PR from here — this machine is unattended, so nothing you do here
-gets a second pair of eyes before it lands.
+press merge yourself. Instead, enable auto-merge on the PR you open
+(`gh pr merge --auto --squash`): this machine is unattended, so the second pair
+of eyes is the pipeline — CI runs the repo's own `verify`, a green PR merges by
+itself and the deploy follows. A red PR stays open; say so in your final message
+and name what is red.
 
 Some checkouts under `~/dev` are stale clones whose local `main` has diverged
 from the remote. Do not try to reconcile them. Branch from `origin/<default>`:

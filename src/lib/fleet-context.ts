@@ -1,5 +1,5 @@
-export const FLEET_PROJECT_STORAGE_KEY = "fleetcrown:active-project";
-export const FLEET_PROJECT_EVENT = "fleetcrown:project-context";
+export const FLEET_PROJECT_STORAGE_KEY = "loki:active-project";
+export const FLEET_PROJECT_EVENT = "loki:project-context";
 
 export type FleetWorkspaceSurfaceId = "profile" | "chat" | "control" | "terminal";
 export type FleetSurfaceId = FleetWorkspaceSurfaceId | "activity";

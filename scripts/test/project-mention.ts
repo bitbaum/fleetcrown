@@ -46,7 +46,7 @@ const FLEET = [
   "aoz-housing",
   "botsmann",
   "datacat",
-  "fleetcrown",
+  "loki",
   "orangecat",
 ];
 
@@ -122,7 +122,7 @@ check(
     "I want you to tell me what is left to do with Orange Cat for it to work properly.",
   ),
 );
-check("tell me …", !looksLikeDispatchTask("tell me how the deploy pipeline works for fleetcrown"));
+check("tell me …", !looksLikeDispatchTask("tell me how the deploy pipeline works for loki"));
 check(
   "can you explain …",
   !looksLikeDispatchTask("Can you explain what changed in datacat on Friday"),
@@ -141,7 +141,7 @@ check(
 );
 
 console.log("\ncommand-resolve — work is still work");
-check("imperative with a verb", looksLikeDispatchTask("fix the failing tests in fleetcrown"));
+check("imperative with a verb", looksLikeDispatchTask("fix the failing tests in loki"));
 check("build handoff", looksLikeDispatchTask("ok let's build it"));
 check("explicit implement", looksLikeDispatchTask("implement the invite flow for botsmann"));
 check(

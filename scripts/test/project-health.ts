@@ -94,7 +94,7 @@ eq(
 
 // The bulk-import placeholder description does not count as a brief.
 const placeholder = computeProjectHealth({
-  description: "Local repository imported from fleetcrown-ui",
+  description: "Local repository imported from loki-ui",
   attrs: {},
 });
 eq(

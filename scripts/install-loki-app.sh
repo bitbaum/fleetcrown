@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# install-fleetcrown-app.sh — build and install FleetCrown as a systemd user service.
+# install-loki-app.sh — build and install Loki as a systemd user service.
 #
 # Run once after cloning, and again after significant dependency changes.
 # The service auto-starts on login and restarts on crash.
 #
-# Usage: ./scripts/install-fleetcrown-app.sh [--skip-build]
+# Usage: ./scripts/install-loki-app.sh [--skip-build]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-SERVICE_NAME="fleetcrown-app"
+SERVICE_NAME="loki-app"
 SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.service"
 STANDALONE="$PROJECT_DIR/.next/standalone"
 
-log() { echo "[install-fleetcrown-app] $*"; }
+log() { echo "[install-loki-app] $*"; }
 
 # ── 1. Build ──────────────────────────────────────────────────────────────────
 
@@ -50,14 +50,14 @@ mkdir -p "$HOME/.config/systemd/user"
 
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=FleetCrown — Life OS (local production server)
-Documentation=https://github.com/bitbaum/fleetcrown
+Description=Loki — Life OS (local production server)
+Documentation=https://github.com/bitbaum/loki
 After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=${STANDALONE}
-ExecStart=${SCRIPT_DIR}/fleetcrown-app.sh
+ExecStart=${SCRIPT_DIR}/loki-app.sh
 Restart=on-failure
 RestartSec=5
 # Next's standalone server can hold open instrumentation resources on SIGTERM.
@@ -94,7 +94,7 @@ STATUS=$(systemctl --user is-active "$SERVICE_NAME" 2>/dev/null || echo "unknown
 if [ "$STATUS" = "active" ]; then
   PORT=$(grep "^PORT=" "$PROJECT_DIR/.env.local" 2>/dev/null | cut -d= -f2 || echo "3000")
   PORT="${PORT:-3000}"
-  log "✓ FleetCrown is running at http://localhost:${PORT}"
+  log "✓ Loki is running at http://localhost:${PORT}"
   log "  Manage with: systemctl --user {status|stop|restart|logs} ${SERVICE_NAME}"
   log "  View logs:   journalctl --user -u ${SERVICE_NAME} -f"
 else

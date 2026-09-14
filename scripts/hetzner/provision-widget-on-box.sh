@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Provision a site's FleetCrown project + widget token, ON THE BOX.
+# Provision a site's Loki project + widget token, ON THE BOX.
 #
 #   provision-widget-on-box.sh <slug> <title> <host>
 #
@@ -12,7 +12,7 @@
 #
 # WHY THIS EXISTS AT ALL
 #
-# Production FleetCrown's database is 127.0.0.1/fleetcrown — loopback only.
+# Production Loki's database is 127.0.0.1/loki — loopback only.
 # Nothing off the box can reach it. `new-site.sh` ran provision-widget.ts on the
 # LAPTOP, so the step failed on every run; and because an agent works in a git
 # worktree, where the gitignored .env.local does not exist, it failed before it
@@ -51,9 +51,9 @@ trap 'rm -f "$raw_out" "$raw_err"' EXIT
 # The remote side sources the app's env, names the owner (the script refuses to
 # guess between seven users, correctly), and runs the provisioner in place.
 ssh -o BatchMode=yes -o ConnectTimeout=20 "$BOX_UBUNTU" \
-  "set -a; . '$BOX_FLEETCROWN_ENV'; set +a; \
-   export FLEETCROWN_OWNER_EMAIL='$FLEETCROWN_OWNER_EMAIL'; \
-   cd '$BOX_FLEETCROWN' && npx tsx scripts/provision-widget.ts '$SLUG' '$TITLE' '$HOST'" \
+  "set -a; . '$BOX_LOKI_ENV'; set +a; \
+   export LOKI_OWNER_EMAIL='$LOKI_OWNER_EMAIL'; \
+   cd '$BOX_LOKI' && npx tsx scripts/provision-widget.ts '$SLUG' '$TITLE' '$HOST'" \
   >"$raw_out" 2>"$raw_err"
 rc=$?
 

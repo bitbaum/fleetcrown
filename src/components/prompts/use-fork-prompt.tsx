@@ -8,7 +8,7 @@ import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 export type ForkState = "idle" | "forking" | "done" | "error";
 
 /**
- * Fork a FleetCrown default into a user-owned copy. The default's body becomes
+ * Fork a Loki default into a user-owned copy. The default's body becomes
  * the editable body of a new `fc-default-fork` row, tracked back to its origin
  * via `forkedFromKey`. This is the missing control behind the "fork a default"
  * copy in UserPromptsSection — the DB already supported it.

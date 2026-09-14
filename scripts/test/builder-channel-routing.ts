@@ -32,9 +32,9 @@ import {
 } from "@/lib/execution-access";
 import { BUILDER_CHANNELS, DEFAULT_BUILDER_CHANNEL } from "@/lib/constants/statuses";
 
-const CLONEABLE = "https://github.com/bitbaum/fleetcrown.git";
+const CLONEABLE = "https://github.com/bitbaum/loki.git";
 const LOCKED = { dirPath: "/home/g/dev/scratch", gitUrl: null };
-const PORTABLE = { dirPath: "/home/g/dev/fleetcrown", gitUrl: CLONEABLE };
+const PORTABLE = { dirPath: "/home/g/dev/loki", gitUrl: CLONEABLE };
 const REPO_ONLY = { gitUrl: CLONEABLE };
 
 // The default itself must be a real channel, not a typo'd string that would
@@ -102,8 +102,8 @@ if (projectPreferredChannel(REPO_ONLY, "local") !== "local") {
 // ── Box-rooted checkouts are the box's (lock in the other direction) ────────
 const BOX_ROOT = "/srv/box-dev";
 const BOX_PROJECT = { dirPath: `${BOX_ROOT}/velokiosk-sep10`, gitUrl: CLONEABLE };
-const prevBoxRoot = process.env.FLEETCROWN_BOX_DEV_ROOT;
-process.env.FLEETCROWN_BOX_DEV_ROOT = `${BOX_ROOT}/`;
+const prevBoxRoot = process.env.LOKI_BOX_DEV_ROOT;
+process.env.LOKI_BOX_DEV_ROOT = `${BOX_ROOT}/`;
 if (projectChannelLock(BOX_PROJECT) !== "cloud")
   throw new Error("lock: box-rooted dirPath is cloud");
 if (pickDispatchChannel({ ...BOX_PROJECT, builderPref: "local" }) !== "cloud")
@@ -112,10 +112,10 @@ if (projectChannelLock({ dirPath: `${BOX_ROOT}-other/x`, gitUrl: CLONEABLE }) !=
   throw new Error("lock: a sibling prefix is not under the box root");
 if (projectChannelLock({ dirPath: `${BOX_ROOT}/only-here`, gitUrl: null }) !== "cloud")
   throw new Error("lock: box-rooted without a git url is still the box's");
-delete process.env.FLEETCROWN_BOX_DEV_ROOT;
+delete process.env.LOKI_BOX_DEV_ROOT;
 if (projectChannelLock(BOX_PROJECT) !== null)
   throw new Error("lock: without an explicit box root, nothing is box-rooted (laptop dev)");
-if (prevBoxRoot !== undefined) process.env.FLEETCROWN_BOX_DEV_ROOT = prevBoxRoot;
+if (prevBoxRoot !== undefined) process.env.LOKI_BOX_DEV_ROOT = prevBoxRoot;
 if (projectChannelLock(LOCKED) !== "local") throw new Error("lock: dirPath-only is local");
 if (projectChannelLock(PORTABLE) !== null) throw new Error("lock: cloneable is unlocked");
 if (projectChannelLock(null) !== null) throw new Error("lock: absent project is unlocked");
@@ -133,7 +133,7 @@ const SHAPES = [
   { dirPath: "/x" },
   { gitUrl: CLONEABLE },
   { dirPath: "/x", gitUrl: CLONEABLE },
-  { dirPath: "/x", gitUrl: "git@github.com:bitbaum/fleetcrown.git" },
+  { dirPath: "/x", gitUrl: "git@github.com:bitbaum/loki.git" },
   { gitUrl: CLONEABLE, builderPref: "local" },
   { gitUrl: CLONEABLE, builderPref: "cloud" },
   { dirPath: "/x", gitUrl: CLONEABLE, builderPref: "local" },

@@ -118,7 +118,7 @@ while IFS='|' read -r name port domains repo appdir db rest; do
     missing_ci="$missing_ci $name"
   fi
   # "Has CD" means a workflow that can reach the box — the canonical deploy.yml
-  # dispatches fleetcrown's selfhost-deploy.yml; anything hand-rolled must at
+  # dispatches loki's selfhost-deploy.yml; anything hand-rolled must at
   # least trigger on push to main and call itself Deploy to count.
   if ls "$repo"/.github/workflows/*.y*ml >/dev/null 2>&1 \
      && grep -lqE "selfhost-deploy\.yml|^name: *Deploy" "$repo"/.github/workflows/*.y*ml 2>/dev/null; then

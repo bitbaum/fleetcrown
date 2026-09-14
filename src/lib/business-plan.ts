@@ -12,7 +12,7 @@ import { HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
  * The living business plan — automatic business creation and development.
  *
  * A project profile is not a record to admire; it is the plan the fleet
- * executes against. This module turns everything FleetCrown knows about a
+ * executes against. This module turns everything Loki knows about a
  * project (profile, sibling projects for synergies, recent agent activity)
  * into (a) a readable business plan and (b) concrete dispatchable actions
  * that flow into the same prompt queue the autopilot drains. Regenerating

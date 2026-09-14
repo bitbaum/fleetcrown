@@ -44,7 +44,7 @@ const STATE_LABEL: Record<string, string> = {
   error: "failed",
 };
 
-/** One terminal pane: provisions a FleetCrown-owned bash PTY, streams it into
+/** One terminal pane: provisions a Loki-owned bash PTY, streams it into
  *  xterm (via TerminalView), and terminates it on unmount (pane close or
  *  leaving the page). Kept mounted while the terminal page is open so switching
  *  tabs/splitting never drops the shell. */

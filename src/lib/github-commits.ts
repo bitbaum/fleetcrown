@@ -1,6 +1,6 @@
 /**
  * Recent commits for a project's GitHub repo — the evidence layer that keeps
- * the profile truthful when work lands outside FleetCrown-dispatched runs
+ * the profile truthful when work lands outside Loki-dispatched runs
  * (observed: a project showed "Idle · last active 1mo ago" while 17 commits
  * landed in two days). Uses the owner's linked GitHub OAuth token, same as
  * github-provision. Server-side only; failures degrade to null, never break

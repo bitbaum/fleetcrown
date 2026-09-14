@@ -33,7 +33,7 @@ export async function runLokiBusinessPlan(
       ok: false,
       code: "no_project",
       message:
-        "Which project should get the business plan? Select one on the right or name it (e.g. **generate business plan for fleetcrown**).",
+        "Which project should get the business plan? Select one on the right or name it (e.g. **generate business plan for loki**).",
     };
   }
 
@@ -119,7 +119,7 @@ export async function proposeLokiProfileUpdate(
       ok: false,
       code: "no_project",
       message:
-        "Which project should I update? Select one on the right or name it (e.g. **set mission to … for fleetcrown**).",
+        "Which project should I update? Select one on the right or name it (e.g. **set mission to … for loki**).",
     };
   }
 

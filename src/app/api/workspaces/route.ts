@@ -28,7 +28,7 @@ const ProvisionBody = z.object({
   rows: z.number().int().positive().max(500).optional(),
 });
 
-/** POST /api/workspaces — provision (or re-attach to) a FleetCrown-owned agent PTY.
+/** POST /api/workspaces — provision (or re-attach to) a Loki-owned agent PTY.
  *  Idempotent per (user, projectKey): re-provisioning a live workspace returns it. */
 export async function POST(req: NextRequest) {
   const userId = await getApiUserId();

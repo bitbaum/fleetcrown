@@ -1,14 +1,14 @@
 /**
- * Seed FleetCrown's OWN project profile so the autopilot dispatches against a
+ * Seed Loki's OWN project profile so the autopilot dispatches against a
  * concrete roadmap instead of doing generic work.
  *
- * The dogfood gap (2026-06-19): the `fleetcrown` project entity had a marketing
+ * The dogfood gap (2026-06-19): the `loki` project entity had a marketing
  * placeholder description ("Local repository imported from …") and ZERO goals.
  * getProjectContext injects exactly the entity description (the brief) + active
  * goals (the roadmap) into every dispatch — so with neither, dispatched agents
  * got no real context.
  *
- * This script (idempotent, scoped to the fleetcrown entity):
+ * This script (idempotent, scoped to the loki entity):
  *   1. Sets an engineering-grade brief on the entity (architecture + conventions).
  *   2. Replaces the reliability/observability/context roadmap goals — each goal
  *      carries milestones that ARE the acceptance criteria.
@@ -16,7 +16,7 @@
  * Re-running only touches goals tagged metadata.roadmap === ROADMAP_TAG, so any
  * manually-created goals on the project are left alone.
  *
- * Run:  FLEETCROWN_SEED_ROADMAP=1 DATABASE_URL=... npx tsx scripts/seed-fleetcrown-roadmap.ts
+ * Run:  LOKI_SEED_ROADMAP=1 DATABASE_URL=... npx tsx scripts/seed-loki-roadmap.ts
  */
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -25,8 +25,8 @@ import * as schema from "../src/db/schema";
 import type { Milestone } from "../src/db/schema/goals";
 import { ENTITY_TYPE, GOAL_STATUS } from "../src/lib/constants/statuses";
 
-if (process.env.FLEETCROWN_SEED_ROADMAP !== "1") {
-  console.error("Refusing to run without FLEETCROWN_SEED_ROADMAP=1.");
+if (process.env.LOKI_SEED_ROADMAP !== "1") {
+  console.error("Refusing to run without LOKI_SEED_ROADMAP=1.");
   process.exit(1);
 }
 
@@ -41,10 +41,10 @@ const ROADMAP_TAG = "autopilot-reliability";
 // Engineering-grade brief injected verbatim by getProjectContext (only used when
 // it is prose, not a filesystem path — so this replaces the path-like placeholder).
 const BRIEF = [
-  "FleetCrown — multi-user SaaS to command AI agent fleets across projects (the platform's own dogfood customer).",
-  "Stack: Next.js 16 (App Router, Server Components/Actions), TypeScript strict, Tailwind 4 + shadcn/ui (always dark, .dark on <html>), Drizzle ORM (schema is the SSOT for types via $inferSelect/$inferInsert), PostgreSQL 17. Self-hosted on a Hetzner box (systemd fleetcrown-app serving the Next standalone build behind Caddy) — NOT Vercel.",
+  "Loki — multi-user SaaS to command AI agent fleets across projects (the platform's own dogfood customer).",
+  "Stack: Next.js 16 (App Router, Server Components/Actions), TypeScript strict, Tailwind 4 + shadcn/ui (always dark, .dark on <html>), Drizzle ORM (schema is the SSOT for types via $inferSelect/$inferInsert), PostgreSQL 17. Self-hosted on a Hetzner box (systemd loki-app serving the Next standalone build behind Caddy) — NOT Vercel.",
   "Architecture: src/app = thin pages + API routes that delegate to src/db/queries (one file per domain) and components; src/db/schema = Drizzle tables (type SSOT); src/config = SSOT for navigation/channels/prompt-library; src/lib = orchestration contract, session, tools. home/ is the local-first orchestration library (watcher + worker tail one append-only JSONL event log).",
-  "Execution (2026-06): The cloud builder is fleetcrown-box-runner.service on Hetzner — headless Fleet Runner core polling pending_commands and running agents in FleetCrown-owned node-pty PTYs. The web app is a control plane only (RUNTIME_AVAILABLE unset); Terminal → Cloud watches via peek-stream. Optional desktop Fleet Runner on the operator's computer shares the same queue.",
+  "Execution (2026-06): The cloud builder is loki-box-runner.service on Hetzner — headless Fleet Runner core polling pending_commands and running agents in Loki-owned node-pty PTYs. The web app is a control plane only (RUNTIME_AVAILABLE unset); Terminal → Cloud watches via peek-stream. Optional desktop Fleet Runner on the operator's computer shares the same queue.",
   "Loki is the primary command surface (NL composer, fleet fast paths, move-forward). Control is the nerve center for fleet state. Priority plan SSOT: docs/architecture/priority-plan-2026-H2.md.",
   "Design system: a strict 4-layer token pipeline — globals.css :root raw values -> @theme inline Tailwind mappings -> ui-* component classes -> JSX (structure + layout only). Never use palette colors, hex, or arbitrary type sizes in components.",
   "Conventions: first-principles + SSOT/DRY/SoC/KISS/YAGNI; getCurrentUserId() for user id; <Modal>/<Drawer> primitives; lib/dates.ts for dates; useInlineEdit/useCreateMutation hooks; every table has user_id (multi-user), UUID PKs, JSONB metadata. Deploy via scripts/deploy-hetzner.sh (build -> rsync -> restart -> verify) with push-to-deploy on main.",
@@ -60,7 +60,7 @@ type GoalSeed = {
 // Ordered to match docs/architecture/priority-plan-2026-H2.md (Horizons A→B, defer i18n).
 const GOALS: GoalSeed[] = [
   {
-    title: "FleetCrown-owned PTY terminals (zellij migration)",
+    title: "Loki-owned PTY terminals (zellij migration)",
     description:
       "Own the agent terminal instead of puppeting zellij tab names. Done 2026-09-11 (Fleet Runner 0.8.19): every agent runs in an owned node-pty PTY on both builders; the zellij adapter, cold-start restore and focus-tab are deleted.",
     progress: 100,
@@ -151,13 +151,11 @@ async function main() {
   const [entity] = await db
     .select({ id: schema.entities.id, userId: schema.entities.userId, name: schema.entities.name })
     .from(schema.entities)
-    .where(
-      and(eq(schema.entities.type, ENTITY_TYPE.PROJECT), ilike(schema.entities.name, "fleetcrown")),
-    )
+    .where(and(eq(schema.entities.type, ENTITY_TYPE.PROJECT), ilike(schema.entities.name, "loki")))
     .limit(1);
 
   if (!entity) {
-    console.error("No project entity named 'fleetcrown' found — nothing to seed.");
+    console.error("No project entity named 'loki' found — nothing to seed.");
     await client.end();
     process.exit(1);
   }
@@ -194,7 +192,7 @@ async function main() {
       metadata: { roadmap: ROADMAP_TAG },
     });
   }
-  console.log(`Seeded ${GOALS.length} roadmap goals for fleetcrown.`);
+  console.log(`Seeded ${GOALS.length} roadmap goals for loki.`);
 
   await client.end();
 }

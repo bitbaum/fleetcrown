@@ -2,7 +2,7 @@
 /**
  * Watcher — M3 Bridge.
  *
- * Watches ~/.fleetcrown/sessions/<TAB>.md for changes. When an agent writes
+ * Watches ~/.loki/sessions/<TAB>.md for changes. When an agent writes
  * its end-of-session handoff (done/next/tests/todos/health), this process
  * emits a `worker.idle` event into the JSONL event log so the orchestrator
  * learns about the run without modifying the agent's stop hooks.
@@ -14,7 +14,7 @@
  * were retired on 2026-06-11 — see content/thoughts/killing-the-bash-daemon.md.)
  *
  * Run:    npx tsx home/watcher.ts
- * Verify: edit any ~/.fleetcrown/sessions/*.md (or wait for a real agent to
+ * Verify: edit any ~/.loki/sessions/*.md (or wait for a real agent to
  *         finish) and tail ~/.<APP_SLUG>/events.jsonl
  */
 
@@ -306,7 +306,7 @@ function selfTest() {
     },
     {
       name: "tabFromFilename strips the .md extension",
-      run: () => tabFromFilename("FleetCrown.md") === "FleetCrown",
+      run: () => tabFromFilename("Loki.md") === "Loki",
     },
     {
       name: "tabFromFilename returns null for non-.md files",

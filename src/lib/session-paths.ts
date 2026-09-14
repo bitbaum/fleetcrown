@@ -2,10 +2,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-export const FLEET_SESSIONS_DISPLAY_PATH = "~/.fleetcrown/sessions";
+export const FLEET_SESSIONS_DISPLAY_PATH = "~/.loki/sessions";
 
 export function fleetSessionsDir(homeDir = os.homedir()): string {
-  return process.env.APP_SESSIONS_DIR ?? path.join(homeDir, ".fleetcrown", "sessions");
+  return process.env.APP_SESSIONS_DIR ?? path.join(homeDir, ".loki", "sessions");
 }
 
 export function legacyClaudeSessionsDir(homeDir = os.homedir()): string {
@@ -13,7 +13,7 @@ export function legacyClaudeSessionsDir(homeDir = os.homedir()): string {
 }
 
 /**
- * Move FleetCrown-owned handoffs out of Claude's protected configuration tree.
+ * Move Loki-owned handoffs out of Claude's protected configuration tree.
  * Copy-only keeps rollback compatibility; existing destination files always win.
  */
 export function migrateLegacyHandoffs(homeDir = os.homedir()): string {
@@ -24,7 +24,7 @@ export function migrateLegacyHandoffs(homeDir = os.homedir()): string {
     return destination;
 
   for (const name of fs.readdirSync(legacy)) {
-    // Claude owns the live <pid>.json files. FleetCrown owns Markdown handoffs,
+    // Claude owns the live <pid>.json files. Loki owns Markdown handoffs,
     // roadmaps, and blocker directories, so only those migrate.
     if (name.endsWith(".json")) continue;
     const from = path.join(legacy, name);

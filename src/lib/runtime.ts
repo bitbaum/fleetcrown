@@ -11,7 +11,7 @@ export function isRuntimeAvailable(): boolean {
 
 /** Server-owned sandbox workspaces are an explicit hosted-execution opt-in. */
 export function isSandboxExecutorEnabled(): boolean {
-  return process.env.FLEETCROWN_EXECUTOR === "sandbox";
+  return process.env.LOKI_EXECUTOR === "sandbox";
 }
 
 /** Error body when the cloud control plane must not spawn local PTYs (Horizon A2). */

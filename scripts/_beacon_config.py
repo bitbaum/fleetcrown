@@ -6,11 +6,11 @@ import urllib.request
 CUSTOM_CHOICE_PREFIX = "custom:"
 SWITCH_CHOICE_PREFIX = "switch:"
 
-# Override via FLEETCROWN_URL / APP_BASE_URL / legacy COCKPIT_URL for non-default
+# Override via LOKI_URL / APP_BASE_URL / legacy COCKPIT_URL for non-default
 # ports or remote deployments.
 COCKPIT_URL = (
-    os.environ.get("FLEETCROWN_URL")
-    or os.environ.get("FLEETCROWN_BASE_URL")
+    os.environ.get("LOKI_URL")
+    or os.environ.get("LOKI_BASE_URL")
     or os.environ.get("APP_BASE_URL")
     or os.environ.get("COCKPIT_URL")
     or os.environ.get("COCKPIT_BASE_URL")
@@ -23,7 +23,7 @@ MIN_IDLE_SECONDS  = 0    # 0 = always show popup; overridden by settings API if 
 # Legacy file path — kept as fallback when API is unreachable
 _SETTINGS_PATH     = os.path.expanduser("~/.config/agent-dashboard-settings.json")
 # Per-session cache so we only make one API call per beacon invocation
-_SETTINGS_CACHE    = os.path.join("/tmp", "fleetcrown-beacon-settings.json")
+_SETTINGS_CACHE    = os.path.join("/tmp", "loki-beacon-settings.json")
 _CACHE_TTL_SECONDS = 300  # 5 minutes
 
 _META_PATH        = os.path.expanduser("~/.config/agent-prompts.json")
@@ -32,27 +32,27 @@ _LEGACY_META_PATH = os.path.expanduser("~/.config/claude-prompts.json")
 
 def _read_daemon_token() -> str:
     """Return the daemon token from env, daemon.env, or .env.local."""
-    t = os.environ.get("APP_DAEMON_TOKEN") or os.environ.get("FLEETCROWN_DAEMON_TOKEN") or os.environ.get("COCKPIT_DAEMON_TOKEN", "")
+    t = os.environ.get("APP_DAEMON_TOKEN") or os.environ.get("LOKI_DAEMON_TOKEN") or os.environ.get("COCKPIT_DAEMON_TOKEN", "")
     if t:
         return t
     for env_path in (
-        os.path.expanduser("~/.config/fleetcrown/daemon.env"),
+        os.path.expanduser("~/.config/loki/daemon.env"),
         os.path.expanduser("~/.config/cockpit/daemon.env"),
     ):
         try:
             for line in open(env_path):
                 line = line.strip()
-                for key in ("APP_DAEMON_TOKEN", "FLEETCROWN_DAEMON_TOKEN", "COCKPIT_DAEMON_TOKEN"):
+                for key in ("APP_DAEMON_TOKEN", "LOKI_DAEMON_TOKEN", "COCKPIT_DAEMON_TOKEN"):
                     if line.startswith(f"{key}="):
                         return line[len(key) + 1:].strip().strip('"')
         except Exception:
             pass
-    # Try .env.local next to the FleetCrown project root (two levels above scripts/)
+    # Try .env.local next to the Loki project root (two levels above scripts/)
     env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
     try:
         for line in open(env_path):
             line = line.strip()
-            for key in ("APP_DAEMON_TOKEN", "FLEETCROWN_DAEMON_TOKEN", "COCKPIT_DAEMON_TOKEN"):
+            for key in ("APP_DAEMON_TOKEN", "LOKI_DAEMON_TOKEN", "COCKPIT_DAEMON_TOKEN"):
                 if line.startswith(f"{key}="):
                     return line[len(key) + 1:].strip().strip('"')
     except Exception:
@@ -61,9 +61,9 @@ def _read_daemon_token() -> str:
 
 
 def load_settings() -> dict:
-    """Return beacon settings, fetching from the FleetCrown API with 5-min cache.
+    """Return beacon settings, fetching from the Loki API with 5-min cache.
 
-    Falls back to the legacy JSON file when the API is unreachable (e.g. FleetCrown
+    Falls back to the legacy JSON file when the API is unreachable (e.g. Loki
     not running at daemon startup time).
     """
     # 1. Try warm cache first (avoids HTTP on every hook invocation)
@@ -94,7 +94,7 @@ def load_settings() -> dict:
         except Exception:
             pass
 
-    # 3. Legacy file fallback (single-user installs or FleetCrown offline)
+    # 3. Legacy file fallback (single-user installs or Loki offline)
     try:
         if os.path.exists(_SETTINGS_PATH):
             return json.load(open(_SETTINGS_PATH))
@@ -145,9 +145,9 @@ def get_auto_inject_mode() -> str:
 def load_prompt_meta() -> list:
     """Load prompt metadata from SSOT config file.
     DEPRECATED for primary use per debt-reduction-roadmap: Beacon should read
-    from FleetCrown-owned contracts (lib/orchestration/intents.ts + /api or generated
+    from Loki-owned contracts (lib/orchestration/intents.ts + /api or generated
     agent-prompts) not local claude-prompts.json. Fallback only for offline.
-    See Phase 4 of execution plan. Prompt *meaning* lives in FleetCrown now.
+    See Phase 4 of execution plan. Prompt *meaning* lives in Loki now.
     """
     try:
         file = _META_PATH if os.path.exists(_META_PATH) else _LEGACY_META_PATH

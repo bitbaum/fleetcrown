@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Make `git push` deploy — push-to-deploy on our own box.
 #
-# Installs a pre-push hook into every repo in apps.conf (plus fleetcrown
+# Installs a pre-push hook into every repo in apps.conf (plus loki
 # itself) that backgrounds the existing deploy pipeline (build standalone →
 # rsync → restart → health check). The hook detaches and waits a few seconds
 # so the actual push isn't slowed; the deploy builds the working tree you
@@ -10,11 +10,11 @@
 # Idempotent: re-running updates the hook block in place (markers).
 # Husky repos get the line in .husky/pre-push; plain repos in .git/hooks.
 #
-# Usage: install-push-deploy.sh [app ...]   (no args = all + fleetcrown)
+# Usage: install-push-deploy.sh [app ...]   (no args = all + loki)
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-MARK_BEGIN="# >>> fleetcrown push-deploy >>>"
-MARK_END="# <<< fleetcrown push-deploy <<<"
+MARK_BEGIN="# >>> loki push-deploy >>>"
+MARK_END="# <<< loki push-deploy <<<"
 
 install_hook() { # repo_path deploy_cmd app_name
   local repo="$1" deploy_cmd="$2" app="$3"
@@ -67,14 +67,14 @@ EOF
 apps=("$@")
 if [ ${#apps[@]} -eq 0 ]; then
   mapfile -t apps < <(app_names)
-  apps+=(fleetcrown evig)
+  apps+=(loki evig)
 fi
 
 for app in "${apps[@]}"; do
-  if [ "$app" = "fleetcrown" ]; then
-    install_hook /home/g/dev/fleetcrown \
-      "env -u CI bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh" \
-      fleetcrown
+  if [ "$app" = "loki" ]; then
+    install_hook /home/g/dev/loki \
+      "env -u CI bash /home/g/dev/loki/scripts/deploy-hetzner.sh" \
+      loki
     continue
   fi
   if [ "$app" = "evig" ]; then

@@ -42,7 +42,7 @@ assert.ok(
 );
 assert.equal(unscoped.find((c) => c.id === "attention")?.chatOnly, true);
 
-const scoped = composerChips({ projectCount: 4, selectedProjects: ["fleetcrown"] });
+const scoped = composerChips({ projectCount: 4, selectedProjects: ["loki"] });
 assert.deepEqual(
   scoped.map((c) => c.id),
   LOKI_SCOPED_CHIPS.map((c) => c.id),

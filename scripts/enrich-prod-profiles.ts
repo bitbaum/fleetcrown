@@ -1,6 +1,6 @@
 // Backfill prod project profiles from local repo docs.
 //
-// The user's repos already say what each project is — the FleetCrown profiles
+// The user's repos already say what each project is — the Loki profiles
 // shouldn't be emptier than the repos. This script runs the same extraction
 // pipeline as POST /api/projects/[id]/brief, but sourced from local docs and
 // pointed at the production (Hetzner) database. Sources per project, each
@@ -207,12 +207,12 @@ async function main() {
   if (process.env.AUDIT_DATABASE_URL) {
     process.env.DATABASE_URL = process.env.AUDIT_DATABASE_URL;
   } else if (!process.env.DATABASE_URL) {
-    const password = process.env.FLEETCROWN_DB_PASSWORD;
+    const password = process.env.LOKI_DB_PASSWORD;
     const host = process.env.HETZNER_IP;
     if (!password || !host)
-      throw new Error("FLEETCROWN_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
+      throw new Error("LOKI_DB_PASSWORD / HETZNER_IP missing from .env.hetzner.local");
     // Point the app's db module at prod BEFORE importing it.
-    process.env.DATABASE_URL = `postgres://fleetcrown:${encodeURIComponent(password)}@${host}:5432/fleetcrown?sslmode=require`;
+    process.env.DATABASE_URL = `postgres://loki:${encodeURIComponent(password)}@${host}:5432/loki?sslmode=require`;
   }
 
   const { db } = await import("../src/db");

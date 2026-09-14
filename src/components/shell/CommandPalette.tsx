@@ -67,7 +67,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   // Hydrate recents once, lazily, so the order survives across page loads.
-  // Migration: read fleetcrown.* first; fall back to the legacy cockpit.* key
+  // Migration: read loki.* first; fall back to the legacy cockpit.* key
   // so existing users don't lose their recents after the 2026-06 rebrand. The
   // next pushRecent writes under the new key, so the legacy entry stops being
   // read once the user picks anything. Within a mount, `recent` state and

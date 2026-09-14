@@ -5,7 +5,7 @@ import { ChevronLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
-import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import { LOKI_REFRESH_EVENT } from "@/lib/client-events";
 import type { ProjectState } from "@/lib/control-types";
 import type { ProjectOperationsSnapshot } from "./control-presenter";
 import { STATE_DEFINITIONS } from "@/lib/control-states";
@@ -152,7 +152,7 @@ export function ProjectOperationsView({
       if (res.ok) {
         const body = (await res.json()) as { message?: string };
         onBulkNotice?.((body.message ?? "Build started.").replace(/\*\*/g, ""));
-        window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
+        window.dispatchEvent(new CustomEvent(LOKI_REFRESH_EVENT));
       }
     } finally {
       setBulkBusy(false);
@@ -167,7 +167,7 @@ export function ProjectOperationsView({
       if (res.ok) {
         const body = (await res.json()) as { message?: string };
         onBulkNotice?.((body.message ?? "Paused.").replace(/\*\*/g, ""));
-        window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
+        window.dispatchEvent(new CustomEvent(LOKI_REFRESH_EVENT));
       }
     } finally {
       setBulkBusy(false);

@@ -1,32 +1,32 @@
-# FleetCrown cold start and feedback loop — Claude Code handoff
+# Loki cold start and feedback loop — Claude Code handoff
 
 Status: IN PROGRESS. Written 2026-09-10 during Codex implementation; no commit, PR, deploy, or completed end-to-end acceptance yet. Read git diff for actual current changes. Do not treat this document as completion evidence.
 
 ## User intent and authorization
 
-Cato wants independent FleetCrown: brief → real GitHub repo → automatically deployed website → site feedback → Implement → visible deployed change → Check live → operator Resolve → Done. Eligible studio must not need manual SSH/bootstrap/key hunting for each project. OrangeCat integration is optional and is not publication consent. No guessed terminal tab names as project identity. User authorized engineering/UX team work, fixes, PR/normal auto-merge/deploy, and production walk. Preserve unrelated existing work. Public name: Cato only. User specifically requested this handoff before context runs out.
+Cato wants independent Loki: brief → real GitHub repo → automatically deployed website → site feedback → Implement → visible deployed change → Check live → operator Resolve → Done. Eligible studio must not need manual SSH/bootstrap/key hunting for each project. OrangeCat integration is optional and is not publication consent. No guessed terminal tab names as project identity. User authorized engineering/UX team work, fixes, PR/normal auto-merge/deploy, and production walk. Preserve unrelated existing work. Public name: Cato only. User specifically requested this handoff before context runs out.
 
 ## Workspace and instructions
 
-Implementation worktree: `/home/g/dev/fleetcrown-wt/cold-start-loop`
+Implementation worktree: `/home/g/dev/loki-wt/cold-start-loop`
 Branch: `codex/cold-start-loop`, based on origin/main `27626d03405544ec81927b326f587e058ba0b0c1`.
-Original `/home/g/dev/fleetcrown` is dirty and on another branch, ahead 1 / behind 38 at start. Do not reset or switch it. It has unrelated AGENTS.md/apps.conf edits.
+Original `/home/g/dev/loki` is dirty and on another branch, ahead 1 / behind 38 at start. Do not reset or switch it. It has unrelated AGENTS.md/apps.conf edits.
 Read `/home/g/dev/AGENTS.md`, worktree AGENTS.md and CLAUDE.md.
 Fleet local checkout is stale and has NO working-tree AGENTS.md. Fetched current source is available via:
 `git -C /home/g/dev/fleet show origin/main:AGENTS.md`
 and `registers/org.json`, `registers/toolchain.json`, `STACK.md` at origin/main (957d2bf when fetched).
 Fleet rule: one fact producer. Serve register is `scripts/hetzner/apps.conf`; org/tool names from fleet registers. Normal shipment is green PR → auto-merge sweep → CI → Deploy → live verification.
-Dependencies: worktree node_modules was linked to `/home/g/dev/fleetcrown/node_modules`; another agent reported pnpm dependency resolution from cache. Check actual symlink before installing.
+Dependencies: worktree node_modules was linked to `/home/g/dev/loki/node_modules`; another agent reported pnpm dependency resolution from cache. Check actual symlink before installing.
 
 ## Verified live facts
 
-- `https://fleetcrown.orangecat.ch/api/health`: HTTP success, commit 27626d03405544ec81927b326f587e058ba0b0c1, env healthy, runtime false (this does not mean box runner down).
+- `https://loki.orangecat.ch/api/health`: HTTP success, commit 27626d03405544ec81927b326f587e058ba0b0c1, env healthy, runtime false (this does not mean box runner down).
 - `https://dogfood-site-sep10-1201.orangecat.ch`: HTTP 200.
 - Latest three dogfood Deploy runs FAILED: 34470520431, 34470124637, 34470092040 (`catomean/dogfood-site-sep10-1201`). Thus site exists but repeatable CD unproven.
-- Production units are `fleetcrown-app.service` and `fleetcrown-box-runner.service`, both active. Not `fleetcrown`/`fleetcrown-runner`.
-- Box runner user ubuntu, WorkingDirectory `/opt/fleetcrown/runner`, ExecStart `/opt/fleetcrown/runner/node_modules/.bin/tsx scripts/box-runner.ts`. Recent journal says connected.
+- Production units are `loki-app.service` and `loki-box-runner.service`, both active. Not `loki`/`loki-runner`.
+- Box runner user ubuntu, WorkingDirectory `/opt/loki/runner`, ExecStart `/opt/loki/runner/node_modules/.bin/tsx scripts/box-runner.ts`. Recent journal says connected.
 - SSH works as `ubuntu@167.233.22.31` with escalation/network approval.
-- IMPORTANT actual host discrepancy: `/opt/fleetcrown/shared` DOES NOT EXIST. `systemctl show fleetcrown-app --property=EnvironmentFiles` says `/opt/fleetcrown/app/.env`; this file exists, mode 600, owner ubuntu. Do not trust generic shared-env rule over observed service configuration. Do not print secrets. No env migration performed.
+- IMPORTANT actual host discrepancy: `/opt/loki/shared` DOES NOT EXIST. `systemctl show loki-app --property=EnvironmentFiles` says `/opt/loki/app/.env`; this file exists, mode 600, owner ubuntu. Do not trust generic shared-env rule over observed service configuration. Do not print secrets. No env migration performed.
 
 ## Root causes found
 
@@ -88,8 +88,8 @@ Widget default only wired for existing-project provision, not separate create-wi
 ## Production test preparation (unfinished)
 
 Temp `/tmp/fc-mint-session.mjs` reads default studio owner from production DB and mints short-lived Auth.js JWT, writing ONLY token to stdout intended redirected `/tmp/fc-cold-session` chmod600.
-Attempts failed: generic shared env absent; then imports `/opt/fleetcrown/app/node_modules/postgres/src/index.js` not present in standalone output. `/tmp/fc-cold-session` therefore currently empty, NOT a usable session.
-Next: locate usable package imports in `/opt/fleetcrown/runner/node_modules` or durable `/home/ubuntu/dev/fleetcrown/node_modules`, or use supported dogfood auth script with secure runtime env. Never print auth token, database URL or secrets. Could mint using local installed auth library + read-only SSH DB user query with secret captured privately, but keep credentials out of logs.
+Attempts failed: generic shared env absent; then imports `/opt/loki/app/node_modules/postgres/src/index.js` not present in standalone output. `/tmp/fc-cold-session` therefore currently empty, NOT a usable session.
+Next: locate usable package imports in `/opt/loki/runner/node_modules` or durable `/home/ubuntu/dev/loki/node_modules`, or use supported dogfood auth script with secure runtime env. Never print auth token, database URL or secrets. Could mint using local installed auth library + read-only SSH DB user query with secret captured privately, but keep credentials out of logs.
 Use Playwright with private session cookie to walk actual UI once fixes deployed; test mobile/desktop critical path. Browser/API implementation APIs already exist; inspect before automating.
 
 ## Exact next actions
@@ -98,7 +98,7 @@ Use Playwright with private session cookie to walk actual UI once fixes deployed
 2. Finish starter lockfile/install coherence, truthful seed failure recovery, widget integration regression tests. Verify template actually builds standalone from emitted files with difficult quoted brief/name strings.
 3. Run full verify and appropriate production build. Fix actual failures, distinguish pre-existing issues without weakening gates.
 4. Commit focused work, create ready PR only when deployable, let normal auto-merge/CI/Deploy run. Verify new production health commit. Update durable box scripts via normal deploy mechanism; ensure registration invokes updated script rather than stale durable checkout implementation (critical path to inspect).
-5. New unique slug via FleetCrown UI: brief → Make it happen → repo, automatic CD, HTTP200 and persisted liveUrl with no manual per-site register/bootstrap. Ensure content fulfills brief, not only generic starter.
+5. New unique slug via Loki UI: brief → Make it happen → repo, automatic CD, HTTP200 and persisted liveUrl with no manual per-site register/bootstrap. Ensure content fulfills brief, not only generic starter.
 6. From site widget file a deterministic visible change; Implement with project agent; observe actual code/ship/live; Check live → Resolve → Done. Do not substitute root manual edit for product Implement proof.
 7. Update this handoff and concise user status with PRs, commits, URLs and evidence/remaining gaps.
 
@@ -106,8 +106,8 @@ Use Playwright with private session cookie to walk actual UI once fixes deployed
 
 ## Continuation (Claude Code, 2026-09-10, after Codex ran out of budget)
 
-Lineage: Grok wrote the product handoff (FleetCrown-first entry path, OrangeCat →
-FleetCrown as optional link that is not publication consent, two profiles that
+Lineage: Grok wrote the product handoff (Loki-first entry path, OrangeCat →
+Loki as optional link that is not publication consent, two profiles that
 stay separate products, acceptance one-liner: brief → real repo → live website
 with zero box babysitting → change it through feedback/Implement → live site
 updates, no tab-name fiction). Codex investigated and left the working tree
@@ -157,7 +157,7 @@ proven. Evidence, not intent.
 
 ### Walk A on production (2026-09-10, after #569 deployed as f25958dc)
 
-Project `velokiosk-sep10` (https://fleetcrown.orangecat.ch/projects/17b76f42-a8a5-49e9-b662-341b5181ac5f),
+Project `velokiosk-sep10` (https://loki.orangecat.ch/projects/17b76f42-a8a5-49e9-b662-341b5181ac5f),
 brief only, through the same routes the kickoff UI calls. Profile (11 fields),
 roadmap (5 milestones) and repo (`catomean/velokiosk-sep10`, starter seeded
 with lockfile) all landed. Then four defects, none of them in the PR above:
@@ -184,7 +184,7 @@ with lockfile) all landed. Then four defects, none of them in the PR above:
    there; that runner does not clone on demand, launched claude in a directory
    that does not exist, and reported "inject did not stick" three times. Fix:
    `projectChannelLock` returns `cloud` for a dirPath under
-   `FLEETCROWN_BOX_DEV_ROOT` (explicit env only).
+   `LOKI_BOX_DEV_ROOT` (explicit env only).
 
 Also seen while reproducing on the box: Claude Code shows a workspace-trust
 dialog for a fresh directory. `ensureClaudeReady` already pre-trusts it on the
@@ -199,7 +199,7 @@ shipped here.
 `velokiosk-sep10` is live at https://velokiosk-sep10.orangecat.ch (HTTP 200) with
 the page the kickoff agent built to the brief: title, Mon–Fri 07:00–19:00,
 three fixed prices (CHF 25 / 35 / 120), about, contact email, one accent
-token, and the project-scoped feedback embed. FleetCrown's own status for the
+token, and the project-scoped feedback embed. Loki's own status for the
 project reads `deploymentStatus: live`, `liveUrl` persisted, release
 `20260910-233620-a4c5393` on port 4028, unit active.
 
@@ -271,13 +271,13 @@ the PTY, not one injected into an existing one.
 
 ### Status of the acceptance one-liner
 
-Start in FleetCrown with only a brief, get a real repo and a live website
+Start in Loki with only a brief, get a real repo and a live website
 with zero box babysitting, change it through feedback/Implement, see the live
 site update, no tab-name fiction on the critical path: **met for
 velokiosk-sep10 on 2026-09-11**, with two operator clicks left on the path
 (merging the agent's PRs on a site repo that has no CI/auto-merge yet). The
 registration path itself completes end to end from inside the product on
-FleetCrown 5c27d775: `registered: true`, `deploymentStatus: live`, liveUrl
+Loki 5c27d775: `registered: true`, `deploymentStatus: live`, liveUrl
 persisted, register row on main by PR, monitoring seeded.
 
 Shipped in this continuation: #569, #579 (landed as #585 by a sibling
@@ -305,8 +305,8 @@ session), #589, #592, #596; the box's own register-row PR #588.
 ### UI walk (2026-09-11, 06:16–06:30 UTC, real browser)
 
 The earlier walks used the product's routes from curl. This one drove the
-actual FleetCrown UI in a Chromium (Playwright) with the studio session, plus
-the site's own feedback widget. Project `kaffeeklappe-sep11`, FleetCrown
+actual Loki UI in a Chromium (Playwright) with the studio session, plus
+the site's own feedback widget. Project `kaffeeklappe-sep11`, Loki
 b06fde7.
 
 - Projects → Add: name + description → project created. It did not appear in
@@ -324,7 +324,7 @@ b06fde7.
   once the kickoff agent finished; its PR #1 (the page, to the brief) was
   merged by the operator; Deploy on push; live with menu, hours and widget.
 - On the live site, the widget's own form (scope, text, optional contact,
-  voice, screenshots) sent a visitor report. It appeared in FleetCrown's
+  voice, screenshots) sent a visitor report. It appeared in Loki's
   Feedback inbox under "Needs you" with an Implement button. Implement →
   "Queued — starting" → "Working now". The agent's PR #2 was merged by the
   operator; the deploy put "Sonntags und an Feiertagen geschlossen" on the
@@ -361,7 +361,7 @@ are read against the current design rather than the one they were filed in.
 - **The local runtime is PTY-only.** Fleet Runner owns every agent PTY
   (node-pty). Zellij is gone from the product: no cold-start restore on boot,
   no Settings "Restoration" section, no `/api/control/runtime-state/desired`,
-  no bundled zellij binary, no `FLEETCROWN_RUNNER_PTY`, no `src/lib/zellij.ts`,
+  no bundled zellij binary, no `LOKI_RUNNER_PTY`, no `src/lib/zellij.ts`,
   no `src/lib/terminals/*`, no `home/worker.ts`, no `src/lib/agent-runtime.ts`.
   The "local runtime path still has Zellij gating if no PTY" P2 above is
   closed: an inject for a tab with no live owned PTY fails loudly ("no running
@@ -373,7 +373,7 @@ are read against the current design rather than the one they were filed in.
   components are now `LiveTerminalPanel` / `LiveTerminalRows`). `/control?focus=…`
   survives only as a client-side deep link that selects and highlights the
   project on Control.
-- **Kickoff builds on arrival.** The OrangeCat "Build it with FleetCrown"
+- **Kickoff builds on arrival.** The OrangeCat "Build it with Loki"
   handoff creates the project and lands on `/projects/<id>?kickoff=auto` with
   the kickoff running (profile → milestones → repository → agent); `?review=1`,
   a same-named project, or an already-connected entity show the picker/open
@@ -413,7 +413,7 @@ Remaining, ranked:
    whose `workflow_run` is suppressed, so nothing started Deploy: measured
    here as merged-and-green at 10:22, still serving the previous release at
    11:23, with the sweep's cron not having fired in that hour. #635 gives the
-   site-template's `ci.yml` the `ship` job FleetCrown's own CI has. The one
+   site-template's `ci.yml` the `ship` job Loki's own CI has. The one
    deploy in this walk that a human started was this unstick, after the fix
    was already written; every other step ran from the product.
 2. The product still stores `gitUrl` under the old owner after a transfer;

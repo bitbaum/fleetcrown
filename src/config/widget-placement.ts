@@ -21,7 +21,7 @@
  *   1. AUTO — the widget looks at its corner and steps aside if occupied.
  *      Handles sites nobody has configured, including ones we do not know run
  *      a chat widget. Cannot know intent.
- *   2. OPERATOR — the value in this file, chosen in FleetCrown. Knows intent,
+ *   2. OPERATOR — the value in this file, chosen in Loki. Knows intent,
  *      but only after a human notices.
  *   3. VISITOR — move/hide in the widget itself, kept in localStorage. Catches
  *      what the other two got wrong, for the one person it is hurting.

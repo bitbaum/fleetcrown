@@ -38,8 +38,8 @@ box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
 
 | Service                  | Port | Domain                          | DB                    |
 |--------------------------|------|---------------------------------|-----------------------|
-| fleetcrown-bridge        | 4001 | bridge.orangecat.ch             | —                     |
-| fleetcrown-app           | 4002 | fleetcrown.orangecat.ch         | fleetcrown (PG17)     |
+| loki-bridge        | 4001 | bridge.orangecat.ch             | —                     |
+| loki-app           | 4002 | loki.orangecat.ch         | loki (PG17)     |
 | orangecat-app            | 4003 | orangecat.ch, www               | self-hosted Supabase  |
 | revampit-app             | 4004 | revampit.orangecat.ch           | revampit (PG17)       |
 | kivvi-app                | 4005 | kivvi.orangecat.ch              | kivvi                 |
@@ -78,7 +78,7 @@ and an A record wherever its DNS lands.
   (box .env is otherwise never overwritten).
 - `verify.sh` — fleet-wide systemd + local + public-HTTPS sweep.
 
-The four pre-existing services (bridge, fleetcrown, orangecat, revampit) keep
+The four pre-existing services (bridge, loki, orangecat, revampit) keep
 their handcrafted units and Caddyfile blocks; revampit push-deploy is wired
 via `.husky/pre-push` + `scripts/selfhost-deploy-revampit.sh` (also in
 `install-push-deploy.sh revampit`).
@@ -139,7 +139,7 @@ via `.husky/pre-push` + `scripts/selfhost-deploy-revampit.sh` (also in
 
 ## DNS (Infomaniak, orangecat.ch zone)
 
-A records → 167.233.22.31: @, www (CNAME), bridge, fleetcrown, revampit,
+A records → 167.233.22.31: @, www (CNAME), bridge, loki, revampit,
 supabase, kivvi, datacat, aoz-wohnen, surf-your-life, vitareba,
 revamp-info, petvity, printcraft, sbb, reparaturbonus. Caddy issues certs on
 first resolvable request.
@@ -174,7 +174,7 @@ first resolvable request.
 1. Delete Neon projects (ep-wild-firefly, ep-holy-truth, ep-restless-dream,
    ep-young-meadow, ep-frosty-mode).
 2. Delete/pause Supabase projects ohkueislstxomdjavyhs + ckpynkpsfnuqndplaapc.
-3. Delete the Vercel projects / let the blocked team rot. fleetcrown.vercel.app
+3. Delete the Vercel projects / let the blocked team rot. loki.vercel.app
    etc. are gone regardless (Vercel-owned names).
 4. Final dumps live in /opt/backups/initial/ + /opt/backups/supabase/ — keep.
 
@@ -182,7 +182,7 @@ first resolvable request.
 
 `git push` on main deploys — the Vercel UX, self-hosted. A pre-push hook
 (installed by `scripts/hetzner/install-push-deploy.sh`, idempotent, all
-manifest repos + fleetcrown) backgrounds the standalone build + rsync +
+manifest repos + loki) backgrounds the standalone build + rsync +
 restart; logs in /tmp/push-deploy-<app>.log. The deploy builds the working
 tree being pushed from. Husky repos get the block in .husky/pre-push,
 plain repos in .git/hooks/pre-push.

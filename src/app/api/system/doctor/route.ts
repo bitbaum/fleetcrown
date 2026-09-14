@@ -33,7 +33,7 @@ async function shell(command: string, timeout = 5000): Promise<string> {
 }
 
 function readTokenFile(): string {
-  const path = `${homedir()}/.config/fleetcrown/fleet-runner-token`;
+  const path = `${homedir()}/.config/loki/fleet-runner-token`;
   if (!existsSync(/*turbopackIgnore: true*/ path)) return "";
   return readFileSync(/*turbopackIgnore: true*/ path, "utf8").trim();
 }
@@ -41,7 +41,7 @@ function readTokenFile(): string {
 function readRunnerEnv(): Record<string, string> {
   // Fleet Runner writes runner.env; older installs wrote daemon.env. Prefer the
   // current name, fall back to the legacy file so existing machines keep working.
-  const dir = `${homedir()}/.config/fleetcrown`;
+  const dir = `${homedir()}/.config/loki`;
   const path = existsSync(/*turbopackIgnore: true*/ `${dir}/runner.env`)
     ? `${dir}/runner.env`
     : `${dir}/daemon.env`;
@@ -98,12 +98,12 @@ export async function GET() {
   const checks: DoctorCheck[] = [];
 
   // Session 4 of killing-the-bash-daemon: only the local Next.js prod wrapper
-  // remains as a FleetCrown systemd unit. Fleet Runner desktop is a regular
+  // remains as a Loki systemd unit. Fleet Runner desktop is a regular
   // Electron app the user launches from their tray menu — it has no
   // systemd unit to probe (its process tree appears under app-fleet-
   // runner@.service if the user enabled systemd integration, but that's
-  // an OS-level convenience, not a FleetCrown surface).
-  for (const unit of ["fleetcrown-app.service"]) {
+  // an OS-level convenience, not a Loki surface).
+  for (const unit of ["loki-app.service"]) {
     try {
       const [active, enabled] = await Promise.all([
         shell(`systemctl --user is-active ${unit}`).catch(() => "inactive"),
@@ -147,7 +147,7 @@ export async function GET() {
   // its own TS module (desktop/src/main/dispatch.ts). A hook that still
   // points at the deleted bridge is broken; flag it.
   const stopHook = `${homedir()}/.claude/hooks/stop.sh`;
-  const deadBridgeTarget = ".local/share/fleetcrown-beacon/agent-hook-bridge.sh";
+  const deadBridgeTarget = ".local/share/loki-beacon/agent-hook-bridge.sh";
   const stopExists = existsSync(/*turbopackIgnore: true*/ stopHook);
   const stopReferencesDeadBridge =
     stopExists &&
@@ -170,7 +170,7 @@ export async function GET() {
   // only shows dispatched work. Fleet Runner installs it on startup
   // (desktop/src/main/capture-hook.ts); warn — not fail — because dispatch-only
   // setups work fine without it, they just under-report.
-  const captureScript = `${homedir()}/.claude/hooks/fleetcrown-capture.sh`;
+  const captureScript = `${homedir()}/.claude/hooks/loki-capture.sh`;
   const claudeSettingsPath = `${homedir()}/.claude/settings.json`;
   let captureRegistered = false;
   let legacyCaptureRegistered = false;
@@ -184,7 +184,7 @@ export async function GET() {
       (entry) => entry.hooks ?? [],
     );
     captureRegistered = submitHooks.some(
-      (h) => typeof h.command === "string" && h.command.includes("fleetcrown-capture.sh"),
+      (h) => typeof h.command === "string" && h.command.includes("loki-capture.sh"),
     );
     // The June-era hook posts to localhost:3000 and silently drops every
     // prompt on a normal setup. If it is still registered the sensor LOOKS
@@ -206,14 +206,14 @@ export async function GET() {
       captureHealthy
         ? "UserPromptSubmit hook installed — directly-typed prompts reach Activity."
         : legacyCaptureRegistered
-          ? "Legacy fleet-user-prompt.sh is still registered — it posts to localhost and drops prompts. Restart Fleet Runner (≥0.8.12) to migrate to fleetcrown-capture.sh."
+          ? "Legacy fleet-user-prompt.sh is still registered — it posts to localhost and drops prompts. Restart Fleet Runner (≥0.8.12) to migrate to loki-capture.sh."
           : "Not installed — directly-typed Claude prompts won't appear in Activity. Start Fleet Runner (it installs the hook once a token is saved).",
     ),
   );
 
   const token = readTokenFile();
   const env = readRunnerEnv();
-  const envToken = env.FLEETCROWN_DAEMON_TOKEN ?? "";
+  const envToken = env.LOKI_DAEMON_TOKEN ?? "";
   const localToken = token ? await validateAgentToken(token) : null;
   checks.push(
     check(
@@ -236,7 +236,7 @@ export async function GET() {
     ),
   );
 
-  const remoteBase = (env.FLEETCROWN_BASE_URL || APP_URL).replace(/\/$/, "");
+  const remoteBase = (env.LOKI_BASE_URL || APP_URL).replace(/\/$/, "");
   if (token) {
     try {
       const res = await fetch(`${remoteBase}/api/beacon-settings`, {

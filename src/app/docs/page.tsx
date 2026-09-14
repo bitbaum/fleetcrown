@@ -5,7 +5,7 @@ import { PublicSurface } from "@/components/public/PublicSurface";
 
 export const metadata = {
   title: "Documentation",
-  description: "Install FleetCrown, connect a runner, and operate agents safely.",
+  description: "Install Loki, connect a runner, and operate agents safely.",
 };
 
 const guides = [
@@ -48,7 +48,7 @@ export default function DocsPage() {
         <div className="ui-public-eyebrow">Documentation</div>
         <h1 className="ui-public-page-title mt-3 sm:mt-4">Build with a supervised agent fleet</h1>
         <p className="ui-public-lede mt-4 max-w-2xl sm:mt-6">
-          Start small: connect one machine, one project, and one agent. FleetCrown keeps planning,
+          Start small: connect one machine, one project, and one agent. Loki keeps planning,
           dispatch, handoffs, and human approval in one operating loop.
         </p>
         <div className="ui-public-section-gap grid gap-3 sm:grid-cols-2 sm:gap-4">

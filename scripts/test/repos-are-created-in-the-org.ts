@@ -1,4 +1,4 @@
-// Every repository FleetCrown creates lives in the organisation, never on the
+// Every repository Loki creates lives in the organisation, never on the
 // signed-in person's account. Five sites created on 2026-09-10/11 landed under
 // `catomean` because the hosted path called POST /user/repos and the bootstrap
 // route preferred the GitHub user over the org. This fails on:

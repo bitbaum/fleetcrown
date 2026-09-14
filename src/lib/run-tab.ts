@@ -2,7 +2,7 @@
  * Derived run-tabs — the identity primitive for same-project parallel dispatch.
  *
  * The whole dispatch loop is keyed by TAB: PTY workspace (`runner:<tab>`),
- * session handoff (`~/.fleetcrown/sessions/<tab>.md`), /tmp sentinels, the
+ * session handoff (`~/.loki/sessions/<tab>.md`), /tmp sentinels, the
  * owned PTY, and (phase 1) the per-run git worktree. So the cheapest correct way to
  * run TWO agents on one project is to mint each extra concurrent run a unique
  * tab alias — `<project>~<runId8>` — and let every tab-keyed mechanism compose

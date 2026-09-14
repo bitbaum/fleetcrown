@@ -17,7 +17,7 @@
 
   <!-- captain (accent) -->
   <rect x="200" y="92" width="360" height="82" rx="14" fill="var(--surface-raised)" stroke="#f97316" stroke-width="2.5"/>
-  <text x="380" y="124" text-anchor="middle" font-size="17" font-weight="600" fill="var(--text-primary)">FleetCrown — the captain</text>
+  <text x="380" y="124" text-anchor="middle" font-size="17" font-weight="600" fill="var(--text-primary)">Loki — the captain</text>
   <text x="380" y="148" text-anchor="middle" font-size="13" fill="var(--text-secondary)">govern · dispatch · verify across lineages</text>
 
   <!-- captain <-> workers -->

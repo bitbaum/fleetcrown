@@ -1,5 +1,5 @@
 // One-shot verification of the AI profile pipeline (lib/project-brief) against
-// the local dev DB: picks the user's FleetCrown project, runs a real Groq
+// the local dev DB: picks the user's Loki project, runs a real Groq
 // extraction from a short brief, applies it, and reads the attrs back.
 // Run: npx tsx scripts/test/verify-project-brief.ts
 import { config } from "dotenv";
@@ -20,7 +20,7 @@ async function main() {
       description: entities.description,
     })
     .from(entities)
-    .where(and(eq(entities.type, "project"), eq(entities.name, process.argv[2] ?? "fleetcrown")))
+    .where(and(eq(entities.type, "project"), eq(entities.name, process.argv[2] ?? "loki")))
     .limit(1);
   if (!project) {
     const all = await db
@@ -31,12 +31,12 @@ async function main() {
   }
   console.log("project:", project.name, project.id);
 
-  const brief = `FleetCrown is a life operating system and AI agent fleet commander.
+  const brief = `Loki is a life operating system and AI agent fleet commander.
 You sign in, register projects, press one play button and all your projects get
 built by AI agents without supervision; the same button pauses everything.
 It serves builders running many projects at once. Built with Next.js 16,
 TypeScript, Tailwind 4, Drizzle, Postgres 17. Currently in production at
-fleetcrown.orangecat.ch. Next step: make project profiles self-filling from
+loki.orangecat.ch. Next step: make project profiles self-filling from
 free-form text and repos so the fleet always has full context.`;
 
   const profile = await extractProjectProfile(project.name, brief);

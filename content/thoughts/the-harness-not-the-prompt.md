@@ -1,6 +1,6 @@
 ---
 title: The Harness, Not the Prompt
-summary: Prompt engineering was the first lever on a language model. It's now the smallest one. The leverage moved to harness engineering — the scaffold around the model that feeds it, checks it, remembers, and decides what's next. FleetCrown isn't a prompt and isn't an agent; it's a harness, built at fleet scale.
+summary: Prompt engineering was the first lever on a language model. It's now the smallest one. The leverage moved to harness engineering — the scaffold around the model that feeds it, checks it, remembers, and decides what's next. Loki isn't a prompt and isn't an agent; it's a harness, built at fleet scale.
 excerpt: A prompt is a single throw of the dice. A harness is the table, the rules, and the croupier who refuses to pay out on a losing hand. The value moved from the throw to the table.
 publishedAt: 2026-06-25
 tags: architecture,agents,harness,strategy
@@ -26,9 +26,9 @@ A harness is the system *around* the model. It answers four questions the prompt
 
 A prompt is a single throw of the dice. A harness is the table, the rules, and the croupier who refuses to pay out on a losing hand. The value moved from the throw to the table — and the people quietly shipping the most now are the ones who stopped typing prompts and started *designing the system that prompts.*
 
-## Where FleetCrown sits
+## Where Loki sits
 
-Here's the thing worth being precise about: FleetCrown is neither a prompt nor an agent. **It is a harness — engineered at fleet scale.** Not the harness around one model on one task, but the harness around *many agents across many projects.* Map our own pieces onto the four questions and the shape is exact:
+Here's the thing worth being precise about: Loki is neither a prompt nor an agent. **It is a harness — engineered at fleet scale.** Not the harness around one model on one task, but the harness around *many agents across many projects.* Map our own pieces onto the four questions and the shape is exact:
 
 - **What the model sees** → the project profile, injected into every dispatch. Mission, stack, architecture, conventions, and an explicit definition of done — so "next best" is judged against the project's real bar, not generic instincts. We don't hand-write that context per task; the harness assembles it.
 - **Who checks the work** → the cross-model definition-of-done gate. When an agent reports "done," a *different model lineage* reads the handoff against the stated bar; if it isn't met, the loop keeps working. A single agent literally cannot do this — its judge would be itself. The harness can, because the harness isn't the agent.
@@ -37,7 +37,7 @@ Here's the thing worth being precise about: FleetCrown is neither a prompt nor a
 
 ## Why this reframes the whole strategy
 
-If FleetCrown were a prompt, anyone could copy it. If it were an agent, it would be racing Hermes and Claude Code — better-funded, further ahead. But a harness is a different kind of asset:
+If Loki were a prompt, anyone could copy it. If it were an agent, it would be racing Hermes and Claude Code — better-funded, further ahead. But a harness is a different kind of asset:
 
 - A prompt is **per-task and ephemeral** — used once, gone.
 - A harness is **durable and compounding** — every project that flows through it gets the same context discipline, the same verification, the same memory, and each run makes the next one better.
@@ -53,4 +53,4 @@ The reframe turns vague ambition into a checklist:
 3. **Memory is the weakest strut.** Compounding, summarized, fleet-wide lessons injected into every run — that's the gap between our harness and the best single-agent ones, and a fleet's harness should *win* that comparison, not lose it.
 4. **Per-agent skills, we borrow.** A runtime like Hermes already grows its own skills; we orchestrate it rather than rebuild it. The harness doesn't have to make the dice — it has to choose them and check them.
 
-The one-line version: **prompt engineering tunes a throw; harness engineering builds the table; FleetCrown is the table for a whole fleet.** The skill that mattered in 2024 is now the smallest layer of the thing that matters in 2026 — and the thing that matters is the one we're building.
+The one-line version: **prompt engineering tunes a throw; harness engineering builds the table; Loki is the table for a whole fleet.** The skill that mattered in 2024 is now the smallest layer of the thing that matters in 2026 — and the thing that matters is the one we're building.

@@ -189,7 +189,7 @@ export function LiveTerminalPanel({
             <>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
                 <a
-                  href="https://github.com/bitbaum/fleetcrown-releases/releases/latest"
+                  href="https://github.com/bitbaum/loki-releases/releases/latest"
                   target="_blank"
                   rel="noreferrer"
                   className="ui-btn-primary"

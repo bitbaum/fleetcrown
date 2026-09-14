@@ -475,7 +475,7 @@ function WidgetSetupCard({
                     : live
                       ? `Last boot ${compactRelativeDate(new Date(token!.lastSeenAt!))}`
                       : token
-                        ? `The script must run on ${site ?? "the live origin"} (CSP must allow fleetcrown.orangecat.ch). A boot heartbeat is Live — HTML containing the tag is not.`
+                        ? `The script must run on ${site ?? "the live origin"} (CSP must allow loki.orangecat.ch). A boot heartbeat is Live — HTML containing the tag is not.`
                         : "Enable a token, then add the script to the site (copy, or queue an agent)."}
                 </p>
               </div>
@@ -757,7 +757,7 @@ function AiReviewCard({
  * Three states, and the never-chosen one matters: a project nobody has decided
  * about gets an invitation, not a switch sitting in the off position that
  * looks like somebody's decision. Off is the effective default either way, so
- * client sites — which FleetCrown cannot distinguish from its own — never ship
+ * client sites — which Loki cannot distinguish from its own — never ship
  * themselves by accident.
  */
 function AutoShipToggle({ projectId }: { projectId: string }) {
@@ -787,9 +787,9 @@ function AutoShipToggle({ projectId }: { projectId: string }) {
         <p className="text-sm font-medium text-text-primary">Ship fixes automatically</p>
         <p className="mt-0.5 text-xs text-text-tertiary">
           {on
-            ? "When an agent's pull request passes its checks, FleetCrown merges it and the site deploys. A repository with no checks is never merged, and one broken deploy pauses this."
+            ? "When an agent's pull request passes its checks, Loki merges it and the site deploys. A repository with no checks is never merged, and one broken deploy pauses this."
             : neverChosen
-              ? "Right now a fix waits for you to merge its pull request. FleetCrown can do that itself once the checks pass — it only ever merges the pull request it opened for this project."
+              ? "Right now a fix waits for you to merge its pull request. Loki can do that itself once the checks pass — it only ever merges the pull request it opened for this project."
               : "A fix waits for you to merge its pull request."}
         </p>
         {error && <p className="mt-1 text-xs text-status-negative">{error}</p>}

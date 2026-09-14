@@ -39,10 +39,10 @@ const FOOTER_GROUPS = [
   {
     heading: "Support",
     links: [
-      { label: "Support FleetCrown", href: "/support" },
+      { label: "Support Loki", href: "/support" },
       {
         label: "GitHub issues",
-        href: "https://github.com/bitbaum/fleetcrown/issues",
+        href: "https://github.com/bitbaum/loki/issues",
         external: true,
       },
     ],
@@ -52,7 +52,7 @@ const FOOTER_GROUPS = [
     links: [
       { label: "OrangeCat — Economy", href: ECOSYSTEM.orangeCat.siteUrl, external: true },
       { label: "Solon — Governance", href: ECOSYSTEM.solon.siteUrl, external: true },
-      { label: "FleetCrown on OrangeCat", href: ECOSYSTEM_LINKS.fleetCrown, external: true },
+      { label: "Loki on OrangeCat", href: ECOSYSTEM_LINKS.loki, external: true },
     ],
   },
   {

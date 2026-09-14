@@ -3,7 +3,7 @@ import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
 export const metadata = {
   title: "Privacy",
-  description: "What FleetCrown collects, why, and what you can do about it.",
+  description: "What Loki collects, why, and what you can do about it.",
 };
 
 export default function PrivacyPage() {
@@ -16,9 +16,9 @@ export default function PrivacyPage() {
         <section className="space-y-4 mb-10">
           <h2 className="ui-public-prose-h2">Plain English</h2>
           <p>
-            FleetCrown is a personal project run by Cato. It is not yet a registered company. The
-            product collects only what it needs to authenticate you, drive agents on your behalf,
-            and let you sign in again on a different device.
+            Loki is a personal project run by Cato. It is not yet a registered company. The product
+            collects only what it needs to authenticate you, drive agents on your behalf, and let
+            you sign in again on a different device.
           </p>
           <p>
             We don&apos;t sell your data, we don&apos;t share it with advertisers, and we don&apos;t
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>GitHub</strong> — handles sign-in via OAuth. Sees the fact that you
-              authenticated to FleetCrown.{" "}
+              authenticated to Loki.{" "}
               <a
                 href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
                 className="ui-public-link"
@@ -134,21 +134,21 @@ export default function PrivacyPage() {
           <p>
             For privacy questions, open an issue at{" "}
             <a
-              href="https://github.com/bitbaum/fleetcrown/issues"
+              href="https://github.com/bitbaum/loki/issues"
               className="ui-public-link"
               target="_blank"
               rel="noopener noreferrer"
             >
-              github.com/bitbaum/fleetcrown/issues
+              github.com/bitbaum/loki/issues
             </a>{" "}
             or reach Cato via the address on the GitHub profile.
           </p>
         </section>
 
         <p className="ui-public-meta mt-16">
-          This is a pre-incorporation product. When FleetCrown becomes a registered entity (planned
-          as a subsidiary of bitbaum AG), this policy will be updated to reflect the corporate
-          structure. Existing rights will not be reduced by that transition.
+          This is a pre-incorporation product. When Loki becomes a registered entity (planned as a
+          subsidiary of bitbaum AG), this policy will be updated to reflect the corporate structure.
+          Existing rights will not be reduced by that transition.
         </p>
       </main>
     </PublicSurface>

@@ -3,7 +3,7 @@
 // Cursor-style "recent local projects" suggester. Visible only when
 // running inside Fleet Runner (the IPC method comes from the desktop
 // preload). Lists the top-N most-recently-modified git repos found under
-// ~/dev / ~/code / ~/Code / ~/Projects (overridable via FLEETCROWN_DEV_ROOTS
+// ~/dev / ~/code / ~/Code / ~/Projects (overridable via LOKI_DEV_ROOTS
 // env on the desktop process side).
 //
 // One click imports them all via /api/projects/import-from-local — same
@@ -111,7 +111,7 @@ export function LocalDevSuggestions() {
             Import the {projects.length} most-recent repos in your dev folders?
           </div>
           <p className="text-sm text-text-muted mt-0.5">
-            Fleet Runner spotted these on disk. One click registers them as FleetCrown projects.
+            Fleet Runner spotted these on disk. One click registers them as Loki projects.
           </p>
         </div>
       </div>

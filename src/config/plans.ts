@@ -18,7 +18,7 @@ export type PricingPlan = {
    * CHF per month. 0 = genuinely free; null = price to be announced — the tier
    * stays visible, no number is shown, and the checkout rail (the
    * OrangeCat Bitcoin passes) is disabled for it until a number is set.
-   * Mirror any change in orangecat's src/config/fleetcrown-passes.ts + re-seed.
+   * Mirror any change in orangecat's src/config/loki-passes.ts + re-seed.
    */
   priceMonthly: number | null;
   tagline: string;
@@ -48,7 +48,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     key: "personal",
     name: "Personal",
     priceMonthly: null,
-    tagline: "For one builder running FleetCrown as a daily operating layer.",
+    tagline: "For one builder running Loki as a daily operating layer.",
     highlights: [
       projectLimitLabel("personal"),
       "Everything in Free",
@@ -92,8 +92,8 @@ export const PRICING_ANNOUNCED = PRICING_PLANS.some(
 // figure shown is the per-month equivalent. Stated plainly under the grid.
 // While prices are to-be-announced the note says so instead.
 export const PRICING_BILLING_NOTE = PRICING_ANNOUNCED
-  ? "Prices are per month, billed annually. Start free — every plan runs on your own machine or box with your own agent keys, so you only pay FleetCrown for the captain layer."
-  : "Pricing is being finalized and will be announced before anything is charged. Start free — every plan runs on your own machine or box with your own agent keys, so you only ever pay FleetCrown for the captain layer.";
+  ? "Prices are per month, billed annually. Start free — every plan runs on your own machine or box with your own agent keys, so you only pay Loki for the captain layer."
+  : "Pricing is being finalized and will be announced before anything is charged. Start free — every plan runs on your own machine or box with your own agent keys, so you only ever pay Loki for the captain layer.";
 
 // Available on EVERY plan (all shipped today) — the captain layer itself. Listed
 // once, honestly, instead of scattered as per-tier gates the code doesn't apply.

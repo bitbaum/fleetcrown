@@ -127,9 +127,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 function safeLocalProjectPath(
   dirPath: string,
 ): { ok: true; path: string } | { ok: false; error: string } {
-  const devRoot = path.resolve(
-    process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev"),
-  );
+  const devRoot = path.resolve(process.env.LOKI_BOX_DEV_ROOT || path.join(os.homedir(), "dev"));
   const target = path.resolve(dirPath);
   if (target === devRoot || !target.startsWith(devRoot + path.sep)) {
     return { ok: false, error: "Refusing to delete a folder outside the configured dev root." };

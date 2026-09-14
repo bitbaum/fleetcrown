@@ -15,17 +15,17 @@ import { repoSlug } from "@/lib/github-provision";
 
 /** Matches scripts/hetzner/_box-env.sh SITES_BASE_DOMAIN. */
 export function sitesBaseDomain(): string {
-  return (process.env.FLEETCROWN_SITES_BASE_DOMAIN ?? "orangecat.ch").trim() || "orangecat.ch";
+  return (process.env.LOKI_SITES_BASE_DOMAIN ?? "orangecat.ch").trim() || "orangecat.ch";
 }
 
 /** Matches scripts/hetzner/_box-env.sh WORKFLOW_OWNER. */
 export function workflowOwner(): string {
-  return (process.env.FLEETCROWN_WORKFLOW_OWNER ?? "bitbaum").trim() || "bitbaum";
+  return (process.env.LOKI_WORKFLOW_OWNER ?? "bitbaum").trim() || "bitbaum";
 }
 
 /**
  * Reserved DNS / infra labels — mirrored from new-site.sh. A kickoff that
- * claimed fleetcrown.orangecat.ch would be a hostile rename of the control plane.
+ * claimed loki.orangecat.ch would be a hostile rename of the control plane.
  */
 export const RESERVED_SITE_SLUGS = new Set([
   "www",
@@ -57,7 +57,7 @@ export const RESERVED_SITE_SLUGS = new Set([
   "test",
   "preview",
   "bridge",
-  "fleetcrown",
+  "loki",
   "orangecat",
   "supabase",
   "solon",
@@ -88,9 +88,9 @@ export function deployWorkflowYaml(slug: string): string {
   return `name: Deploy
 
 # Push to main → deploy to bitbaum. All logic lives in one place:
-# ${owner}/fleetcrown/.github/workflows/selfhost-deploy.yml
+# ${owner}/loki/.github/workflows/selfhost-deploy.yml
 #
-# Seeded by FleetCrown kickoff / register-cd so the repo is CD-ready once
+# Seeded by Loki kickoff / register-cd so the repo is CD-ready once
 # scripts/hetzner/register-site.sh (or auto-register on the box) adds the
 # apps.conf row and deploy secret.
 on:
@@ -100,7 +100,7 @@ on:
 
 jobs:
   deploy:
-    uses: ${owner}/fleetcrown/.github/workflows/selfhost-deploy.yml@main
+    uses: ${owner}/loki/.github/workflows/selfhost-deploy.yml@main
     with:
       app: ${slug}
     secrets:

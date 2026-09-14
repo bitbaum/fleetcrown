@@ -3,7 +3,7 @@ import { users } from "./users";
 import type { Plan } from "./users";
 
 /**
- * OrangeCat-rail entitlement ledger — one row per Bitcoin-paid FleetCrown pass.
+ * OrangeCat-rail entitlement ledger — one row per Bitcoin-paid Loki pass.
  *
  * The `/api/orangecat/entitlement` webhook writes here on payment settlement.
  * `externalId` (the OC-side settlement id) is UNIQUE, so a retried/duplicate

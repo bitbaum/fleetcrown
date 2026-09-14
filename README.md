@@ -1,18 +1,18 @@
-# FleetCrown
+# Loki
 
-FleetCrown is an independent product for building and changing projects with AI
+Loki is an independent product for building and changing projects with AI
 agents. Start with a brief, create a real repository, build and deploy, then use
 project feedback to direct the next change. OrangeCat linking is optional;
-an OrangeCat account is not required to build in FleetCrown.
+an OrangeCat account is not required to build in Loki.
 
 Org names and relationships come from [bitbaum/fleet](https://github.com/bitbaum/fleet/blob/main/AGENTS.md)
 and its registers. Hosting addresses are recorded in `scripts/hetzner/apps.conf`.
 
 The product thesis is simple: AI agents are becoming cheap execution capacity,
-but serious users still need a trustworthy command center. FleetCrown provides the
+but serious users still need a trustworthy command center. Loki provides the
 state, queues, handoffs, guardrails, and business context around that capacity.
 
-Production: https://fleetcrown.orangecat.ch
+Production: https://loki.orangecat.ch
 **Status:** live, pre-1.0. Hosted on **Hetzner**.
 
 ## What It Does
@@ -33,7 +33,7 @@ Production: https://fleetcrown.orangecat.ch
 
 ## Product And Economic Model
 
-FleetCrown serves individual builders and teams. Optional OrangeCat links connect
+Loki serves individual builders and teams. Optional OrangeCat links connect
 build dossiers to public profiles and funding. Linking does not publish private
 work: publishing requires a separate owner choice.
 
@@ -41,7 +41,7 @@ work: publishing requires a separate owner choice.
 
 | Layer | Value | Planned monetization (not billed) |
 | --- | --- | --- |
-| Individual builder | One FleetCrown for projects, agents, commitments, and execution memory | Pro subscription (planned) |
+| Individual builder | One Loki for projects, agents, commitments, and execution memory | Pro subscription (planned) |
 | Team / studio | Shared project state, team visibility, agent dispatch, audit trail | Per-seat team plan (planned) |
 | Agent runtime | Local daemon connects private machines to the hosted control plane | Paid runtime seats / usage tiers (planned) |
 | Execution intelligence | Prompt routing, queue reasoning, outcomes, continuation policies | Premium automation tier (planned) |
@@ -121,7 +121,7 @@ all-weaker bars — so the rule is now: name the gate, never its contents.
 CI runs type/lint/design/self-test checks on pushes and pull requests. A
 scheduled audit workflow fails on high or critical dependency vulnerabilities.
 Production deploys to the Hetzner box run via `scripts/deploy-hetzner.sh`
-(build → rsync → restart `fleetcrown-app`).
+(build → rsync → restart `loki-app`).
 
 ## Local Development
 
@@ -136,7 +136,7 @@ pnpm run dev
 Minimum local `.env.local`:
 
 ```bash
-DATABASE_URL=postgresql://fleetcrown:changeme@localhost:5432/fleetcrown
+DATABASE_URL=postgresql://loki:changeme@localhost:5432/loki
 AUTH_SECRET=replace-me
 GITHUB_CLIENT_ID=replace-me
 GITHUB_CLIENT_SECRET=replace-me
@@ -153,7 +153,7 @@ accounts need a connected Fleet Runner; see `src/lib/execution-access.ts`. To
 connect your machine:
 
 ```bash
-curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
+curl -fsSL https://loki.orangecat.ch/api/agent/install | node - init --base-url https://loki.orangecat.ch
 ```
 
 The runtime requires at least one supported CLI on `PATH`: `claude`,

@@ -17,7 +17,7 @@ import {
   AUTO_INJECT_MODES,
   type AutoInjectMode,
 } from "@/config/beacon";
-import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import { LOKI_REFRESH_EVENT } from "@/lib/client-events";
 
 export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
@@ -73,7 +73,7 @@ export function BeaconSettings() {
         auto_inject_mode: autoInjectMode,
       });
       setSaved(true);
-      window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
+      window.dispatchEvent(new CustomEvent(LOKI_REFRESH_EVENT));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

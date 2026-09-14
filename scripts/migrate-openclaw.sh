@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # migrate-openclaw.sh — move the OpenClaw/Ivy assistant from the laptop to the
-# always-on Hetzner box (co-located with FleetCrown). OpenClaw is a SEPARATE
-# system from FleetCrown; this lives here for discoverability next to
+# always-on Hetzner box (co-located with Loki). OpenClaw is a SEPARATE
+# system from Loki; this lives here for discoverability next to
 # docs/development/box-rescale-ivy-migration-runbook.md.
 #
 # Two phases:

@@ -1,15 +1,15 @@
-# FleetCrown Feedback Widget
+# Loki Feedback Widget
 
 **Created:** 2026-07-17  
 **Last modified:** 2026-08-14  
-**Last modified summary:** Widget card uses ui-panel / ui-callout (no ad-hoc shadow); snippet collapsed when Live; botsmann boot confirmed 2026-08-14 from https://botsmann.orangecat.ch; CSP must allow the FleetCrown origin.
+**Last modified summary:** Widget card uses ui-panel / ui-callout (no ad-hoc shadow); snippet collapsed when Live; botsmann boot confirmed 2026-08-14 from https://botsmann.orangecat.ch; CSP must allow the Loki origin.
 
 **Status**: COMPLETE 2026-07-28. Phases 1–4 implemented 2026-07-17 — four
 `feat(feedback):` commits (ingest spine, embed bundle, inbox + dispatch,
 self-dogfood); find them with `git log --oneline --grep 'feat(feedback)'`.
 Prod activation done 2026-07-17 (box DDL + FEEDBACK_WIDGET_TOKEN). Customer #1
 cutover done 2026-07-28: revampit/evig prod (revampit.orangecat.ch) loads the
-embed via `FleetCrownFeedbackEmbed` (revampit main 90bfb3497; retired React
+embed via `LokiFeedbackEmbed` (revampit main 90bfb3497; retired React
 widget deleted in 6341ac7f1), verified e2e — a prod submission lands in this
 inbox. Hardening learned from the cutover: the OPTIONS preflight reflects
 `Access-Control-Request-Headers`, because customer sites monkey-patch
@@ -37,7 +37,7 @@ Run succeeds  →  feedback auto-resolves (+ optional reporter email)
 ```
 
 **You do not choose a terminal.** Dispatch never targets “this Cursor chat” or
-“FleetCrown’s Terminal page” directly. It injects into the **project’s agent
+“Loki’s Terminal page” directly. It injects into the **project’s agent
 session** through `injectPrompt` (`src/lib/inject-core.ts`), which runs where the
 project’s stored routing decision says (`pickDispatchChannel`: locus lock → “Runs
 on” → cloud floor); an offline chosen builder queues visibly and is never rerouted. Control / Terminal / Loki are captain surfaces that *also* call the
@@ -51,8 +51,8 @@ same SSOT — feedback Dispatch is that path with a composed prompt.
 | Review open reports | Control feedback strip (new + in-progress); `/projects/{id}#feedback` |
 | Implement / Retry | Same rows — status is **Not started → Queued → Working · N min → PR #N · open → merged → Live · confirm → Done** (or **Not running / Stalled / Failed**). A project with no repository and no folder gets **Connect a repository** instead of Implement, and the dispatch route refuses the same case with a 422 |
 | Watch live output | **Watch** → Terminal whenever the prompt reached an agent PTY (Working, Stalled, Not running after delivery). **Open on Control** only while Queued (empty Terminal ≠ progress) |
-| Who merges | **Ship fixes automatically** is a per-project switch (`user_projects.auto_ship`, Feedback section on the project page). Off — the default, and what an unset project gets — the row asks the operator to merge. On, FleetCrown merges **the pull request its own dispatch opened, and nothing else**, once GitHub says mergeable and every check passed. Deliberately NOT an `auto-merge.yml` in the customer's repo: that would be a commit in someone else's repository, would need back-filling into repos FleetCrown never provisioned, and would merge any green PR including a person's. Conditions and their wording live in `src/lib/feedback/auto-ship.ts`; **a repository with no checks is a hold, not a pass** (absence of red is not evidence), and one failed deploy pauses the project until that fix is sorted |
-| Who is told | Three announcements, not one. A visitor filing (`notify-new.ts`), an agent's run closing (`notify-close.ts`), and — the one that matters — **a fix reaching the live site or failing to deploy** (`notify-shipped.ts`, alert types `fix_live` / `fix_deploy_failed`). The third exists because a run closes at a PULL REQUEST: telling someone "the agent finished" is the same claim the ledger was built to stop making. It fires on a ledger TRANSITION only (the inbox polls every 8s), so each fix announces at most once, and it names whether FleetCrown merged it automatically — the fact an operator needs to keep trusting that switch |
+| Who merges | **Ship fixes automatically** is a per-project switch (`user_projects.auto_ship`, Feedback section on the project page). Off — the default, and what an unset project gets — the row asks the operator to merge. On, Loki merges **the pull request its own dispatch opened, and nothing else**, once GitHub says mergeable and every check passed. Deliberately NOT an `auto-merge.yml` in the customer's repo: that would be a commit in someone else's repository, would need back-filling into repos Loki never provisioned, and would merge any green PR including a person's. Conditions and their wording live in `src/lib/feedback/auto-ship.ts`; **a repository with no checks is a hold, not a pass** (absence of red is not evidence), and one failed deploy pauses the project until that fix is sorted |
+| Who is told | Three announcements, not one. A visitor filing (`notify-new.ts`), an agent's run closing (`notify-close.ts`), and — the one that matters — **a fix reaching the live site or failing to deploy** (`notify-shipped.ts`, alert types `fix_live` / `fix_deploy_failed`). The third exists because a run closes at a PULL REQUEST: telling someone "the agent finished" is the same claim the ledger was built to stop making. It fires on a ledger TRANSITION only (the inbox polls every 8s), so each fix announces at most once, and it names whether Loki merged it automatically — the fact an operator needs to keep trusting that switch |
 | Grouping | Sections are **Needs you / Under way / Shipped**, keyed on `work.waitingOn` (`src/lib/feedback/work-phase.ts`), never on DB status — `dispatched` covers both an agent mid-run (machine) and a fix that deployed an hour ago (you). An open PR and a running deploy are machine; stalled, failed, merged, deployed and "nothing shipped" are you |
 | After the run | The **fix ledger** (`src/lib/feedback/fix-shipping.ts`, refreshed from GitHub with the user's token and cached on the run as `payload.fix`): **PR #N · open → merged → deploying → Live · confirm**, or **nothing shipped / PR closed / deploy failed**. "Check live" appears only once a deploy-like workflow succeeded on the merge commit (or the PR merged and no deploy workflow exists — then the reader has to look). It opens the PROJECT's live URL plus the reported path, never the visitor's host. Confirm resolves; the undo arrow reopens as "not fixed" |
 | Why it is quiet | Silence has two meanings and only one is the operator's problem. When a delivered run prints nothing for 90 s the runner asks the same authentication question the dispatch path already asks (`detectAuthFailure`) and puts the answer on the next heartbeat; the row then reads **"Needs you to sign in"** with Watch opening the terminal, instead of "no output". Measured 2026-09-12: a dispatch sat silent for thirteen minutes wanting a sign-in and the product could only report the silence. Note a blocked agent prints nothing, so `shouldBeat` deliberately lets a beat through on silence *that carries a reason* |
@@ -80,23 +80,23 @@ https://botsmann.orangecat.ch, `/api/widget-boot` `{active:true}`). Earlier “w
 first page load” was CSP (`script-src` blocked widget.js) after Next tree-shook an empty
 build-time token — not a dead ingest pipe.
 **Origin**: Extract revampit's visitor-feedback FAB (`src/components/feedback/`, ~900 lines,
-modular, survived the Hirn deletion intentionally) into a FleetCrown-owned embeddable
+modular, survived the Hirn deletion intentionally) into a Loki-owned embeddable
 widget. Any registered project drops one script tag on its site; visitor feedback flows
-into a per-project inbox in FleetCrown and becomes dispatchable agent work.
+into a per-project inbox in Loki and becomes dispatchable agent work.
 
-## Why this is a FleetCrown feature, not a revampit feature
+## Why this is a Loki feature, not a revampit feature
 
-FleetCrown's thesis is captain-mode: see + govern work across agents you've deployed.
+Loki's thesis is captain-mode: see + govern work across agents you've deployed.
 Visitor feedback is inbound work discovery — today it dies in email inboxes. Closing
 visitor-feedback → project inbox → agent dispatch makes feedback actionable fleet work.
-It is also the first embeddable FleetCrown surface on customer sites (revampit =
+It is also the first embeddable Loki surface on customer sites (revampit =
 customer #1, dogfood).
 
 ## The one-sentence architecture
 
-FleetCrown serves a self-contained script (`/widget.js`); the script renders the
+Loki serves a self-contained script (`/widget.js`); the script renders the
 feedback FAB in a Shadow DOM on the customer's page and POSTs submissions to
-`POST /api/feedback` keyed by a per-project widget token; FleetCrown persists first,
+`POST /api/feedback` keyed by a per-project widget token; Loki persists first,
 surfaces an inbox on the project detail page, and each item has a one-click
 "Dispatch fix" that routes through the existing `/api/control/dispatch` flow.
 
@@ -107,7 +107,7 @@ surfaces an inbox on the project detail page, and each item has a one-click
 Consistent with `cross-product-identity-bridge.md` (embed-don't-share-UI). Customers add:
 
 ```html
-<script src="https://<fleetcrown-host>/widget.js" data-fc-project="fcw_..." async></script>
+<script src="https://<loki-host>/widget.js" data-fc-project="fcw_..." async></script>
 ```
 
 One tag, zero build-step integration, and we can ship widget fixes to every customer
@@ -203,7 +203,7 @@ export const siteFeedback = pgTable("site_feedback", {
 Status flow: `new → dispatched → resolved`, or `new → archived`. Mirrors the action
 queue's philosophy: nothing auto-dispatches; the operator triages.
 
-## Programmatic reports (`window.FleetCrown.report`)
+## Programmatic reports (`window.Loki.report`)
 
 The FAB assumes the visitor noticed something and went looking for the launcher.
 Errors are the opposite case: the product already knows what broke, and making
@@ -211,7 +211,7 @@ the visitor re-describe it in their own words is both friction and information
 loss. So the widget publishes one host-callable entry point:
 
 ```js
-window.FleetCrown?.report({
+window.Loki?.report({
   message: "Cat could not update my product: permission denied for entity actions.",
   diagnostics: { code: "cat_permission_denied", action: "update_product", surface: "cat-chat" },
 });
@@ -239,7 +239,7 @@ Two behaviours worth knowing before you call it:
 - **An already-open panel is left alone.** The visitor may be mid-sentence, and
   silently replacing their text would lose it.
 
-**Deciding what your own control should be — read `window.FleetCrown.ready`.**
+**Deciding what your own control should be — read `window.Loki.ready`.**
 Because the stub is published synchronously, `typeof report === "function"` is
 true even when the widget will never render (token paused, boot unreachable). A
 host that treats the stub's existence as "clicking will do something" ships a
@@ -249,7 +249,7 @@ until the boot gate has said active AND the panel exists:
 ```js
 // Always a real link; upgraded in place when the panel can actually open.
 <a href="/feedback" onClick={e => {
-  if (window.FleetCrown?.ready) { e.preventDefault(); window.FleetCrown.report({ ... }); }
+  if (window.Loki?.ready) { e.preventDefault(); window.Loki.report({ ... }); }
 }}>Report this</a>
 ```
 
@@ -271,8 +271,8 @@ over polling for readiness.
 | `GET /api/projects/[id]/feedback` + `PATCH /api/feedback/[id]` | session | Inbox list + status transitions (archive, resolve). |
 
 Gotchas already known:
-- **CSP on the host site**: `script-src` and `connect-src` must allow the FleetCrown
-  origin (`https://fleetcrown.orangecat.ch`). Botsmann shipped the tag but stayed
+- **CSP on the host site**: `script-src` and `connect-src` must allow the Loki
+  origin (`https://loki.orangecat.ch`). Botsmann shipped the tag but stayed
   “Waiting for the first page load” because CSP blocked `widget.js` (2026-08-14).
   Coverage Live = boot heartbeat after the script actually runs, not after HTML contains the tag.
 - **proxy.ts allowlist** (Next 16 middleware): `api/feedback` and `widget.js` must be
@@ -315,15 +315,15 @@ matters):
    static HTML page AND on a Next.js site.
 3. **Inbox + dispatch** — Feedback tab on ProjectDetail, dispatch-fix wiring, setup
    card with snippet copy.
-4. **Dogfood cutover** — drop the tag on FleetCrown's own public pages (/, /thoughts,
-   /frontier) pointed at the FleetCrown project; then revampit swaps its React widget
+4. **Dogfood cutover** — drop the tag on Loki's own public pages (/, /thoughts,
+   /frontier) pointed at the Loki project; then revampit swaps its React widget
    for the embed tag (its `site_suggestions` pipeline retires; optional dual-write
    during transition).
 5. **AI reviewer (shipped with prod activation)** — `POST /api/projects/[id]/feedback/ai-review`
    dispatches an agent (via the `injectPrompt` SSOT) to open a page headless
    (Playwright), review it on desktop + 320px mobile, and file each finding
    through the same public `POST /api/feedback` + `fcw_` token a human visitor
-   uses (`contact: "FleetCrown AI reviewer"`). Human and AI feedback share one
+   uses (`contact: "Loki AI reviewer"`). Human and AI feedback share one
    inbox and one triage flow; review runs never auto-dispatch fixes. UI: "AI
    review" button on the project feedback section (needs an active widget token).
 6. **Later (not now, YAGNI)** — per-page analytics, theming API, site-wide crawl
@@ -337,7 +337,7 @@ matters):
 
 ## Since v1 (2026-08-24)
 
-- **`window.FleetCrown.report(...)`** (see above): host pages can file a report
+- **`window.Loki.report(...)`** (see above): host pages can file a report
   with the error already described and machine-readable context attached, in one
   click. Built for OrangeCat's AI failure notices, where every dead-end error
   message now carries a "Report" action instead of leaving the user to find the

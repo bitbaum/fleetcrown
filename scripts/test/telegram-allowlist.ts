@@ -94,15 +94,11 @@ if (process.env.__TG_PROBE === "1") {
   }
 
   // The constant is envAlias("TELEGRAM_CHAT_ID"), which reads APP_ /
-  // FLEETCROWN_ / COCKPIT_ prefixed names and NEVER the bare one. Setting
+  // LOKI_ / COCKPIT_ prefixed names and NEVER the bare one. Setting
   // TELEGRAM_CHAT_ID here would configure nothing and the "configured" probe
   // would silently test the unconfigured path — which is exactly what the
   // first version of this test did.
-  const CHAT_KEYS = [
-    "APP_TELEGRAM_CHAT_ID",
-    "FLEETCROWN_TELEGRAM_CHAT_ID",
-    "COCKPIT_TELEGRAM_CHAT_ID",
-  ];
+  const CHAT_KEYS = ["APP_TELEGRAM_CHAT_ID", "LOKI_TELEGRAM_CHAT_ID", "COCKPIT_TELEGRAM_CHAT_ID"];
   const cleared = Object.fromEntries(CHAT_KEYS.map((k) => [k, undefined]));
 
   // ── Configured: the operator has a chat id ─────────────────────────────────

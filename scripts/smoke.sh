@@ -53,7 +53,7 @@ PAGE_ROUTES=(
 #
 # AUTH_ROUTES require a valid session. Without one they return 401 (correct).
 # We accept 200 OR 401 — either proves the route isn't crashing (500).
-# Set FLEETCROWN_SESSION_TOKEN=<token> to run them fully authenticated.
+# Set LOKI_SESSION_TOKEN=<token> to run them fully authenticated.
 # COCKPIT_SESSION_TOKEN is still accepted (legacy).
 PUBLIC_API_ROUTES=(
   "/api/health"

@@ -30,7 +30,7 @@ export type TerminalModeOption<T extends string> = {
 };
 
 /**
- * Source options. `shell` is only offered where a FleetCrown-owned PTY may be
+ * Source options. `shell` is only offered where a Loki-owned PTY may be
  * provisioned (`isRuntimeAvailable()` / sandbox executor); the other two are
  * always listed so the absence of a builder reads as "offline", never as a
  * missing feature.
@@ -88,4 +88,4 @@ export function terminalInputHint(id: TerminalInputMode): string {
 }
 
 /** Persisted so reopening the terminal restores how you were working. */
-export const TERMINAL_MODE_STORAGE_KEY = "fleetcrown:terminal-mode";
+export const TERMINAL_MODE_STORAGE_KEY = "loki:terminal-mode";

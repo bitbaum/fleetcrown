@@ -65,8 +65,8 @@ export default async function PricingPage() {
           <div className="ui-public-eyebrow">Pricing</div>
           <h1 className="ui-public-display-md mt-3 sm:mt-4">Pay for the captain, not the crew.</h1>
           <p className="ui-public-section-lede mx-auto mt-4 sm:mt-5">
-            The agents run on your machine with your own keys. FleetCrown is the one place you
-            command, watch, verify, and govern all of them. Start free — scale when your fleet does.
+            The agents run on your machine with your own keys. Loki is the one place you command,
+            watch, verify, and govern all of them. Start free — scale when your fleet does.
           </p>
         </div>
 

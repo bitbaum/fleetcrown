@@ -149,7 +149,7 @@ export const KEY_REPEAT_DELAY_MS = 420;
 export const KEY_REPEAT_INTERVAL_MS = 85;
 
 /** Persisted so the deck comes back the way the operator left it. */
-export const TERMINAL_DECK_STORAGE_KEY = "fleetcrown:terminal-deck";
+export const TERMINAL_DECK_STORAGE_KEY = "loki:terminal-deck";
 
 /** Nudge on every keycap: a byte sent to a busy agent can take a moment to
  *  redraw, and without a local acknowledgement the operator presses ▼ again. */

@@ -63,7 +63,7 @@ export const VISION_CHAIN: VisionProvider[] = [
 
 /**
  * The chain with unusable entries removed: no API key, or no models configured.
- * A missing key is a normal deployment state (FleetCrown had no OpenRouter key
+ * A missing key is a normal deployment state (Loki had no OpenRouter key
  * at all until this change), so it filters out silently rather than throwing.
  */
 export function usableVisionChain(): Array<{ provider: VisionProvider; model: string }> {

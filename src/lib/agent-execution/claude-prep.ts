@@ -5,9 +5,9 @@
  * watching: the trust-folder dialog on a fresh workspace, or a permission ask
  * for a tool outside the allowlist. The box has done this since box-prepare
  * shipped; the DESKTOP launch path never did, so on a machine without a
- * hand-tuned ~/.claude/settings.json. FleetCrown handoffs used to live under
+ * hand-tuned ~/.claude/settings.json. Loki handoffs used to live under
  * Claude's protected ~/.claude tree, where even broad Write allow rules cannot
- * suppress a confirmation prompt. They now migrate to ~/.fleetcrown/sessions.
+ * suppress a confirmation prompt. They now migrate to ~/.loki/sessions.
  *
  * Extracted from box-workspace.ts so both runners share ONE prep. Merge-only:
  * adds trust + allow rules, never removes or narrows anything the user set.

@@ -1,12 +1,12 @@
 ---
 created_date: 2026-07-01
 last_modified_date: 2026-07-01
-last_modified_summary: Defines the current reliable loop contract for FleetCrown projects and the immediate public-release boundary.
+last_modified_summary: Defines the current reliable loop contract for Loki projects and the immediate public-release boundary.
 ---
 
 # Effective Loop Operations
 
-FleetCrown can run real project loops today when three conditions are true:
+Loki can run real project loops today when three conditions are true:
 
 1. The project has an executable `user_projects` row with a `dir_path`.
 2. A builder is connected for that user:

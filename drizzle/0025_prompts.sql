@@ -1,6 +1,6 @@
 -- User-owned prompt library — Prompt Library v2.1.
 --
--- The 41 FleetCrown default prompts stay in src/config/prompt-library.ts.
+-- The 41 Loki default prompts stay in src/config/prompt-library.ts.
 -- This table is for user-created and project-/org-scoped prompts. The
 -- /prompts page merges both sources at render time.
 --

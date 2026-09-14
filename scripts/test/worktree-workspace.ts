@@ -38,7 +38,7 @@ for (const k of [
 // Point the module's worktree root into the sandbox BEFORE importing it
 // (module-level const reads the env at import time → dynamic import below).
 const SANDBOX = fs.mkdtempSync(path.join(os.tmpdir(), "fc-wt-test-"));
-process.env.FLEETCROWN_WORKTREES_ROOT = path.join(SANDBOX, "worktrees");
+process.env.LOKI_WORKTREES_ROOT = path.join(SANDBOX, "worktrees");
 
 // Loaded inside main() so the env override above lands first (CJS harness —
 // no top-level await; a static import would hoist above the env write).

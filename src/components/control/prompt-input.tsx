@@ -204,7 +204,7 @@ export function PromptInput({
       {/* flex-wrap so the status line below can take a row of its own on a
           phone. It shared this row with four controls and Send, which left it
           72px: the audit measured "Autopilot on: queue is empty, so
-          FleetCrown…" at 0% shown at 320px and 14% at 390px. No amount of
+          Loki…" at 0% shown at 320px and 14% at 390px. No amount of
           shorter copy fits a sentence into 72px — it needed the width, not
           fewer words. */}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-border-subtle px-3 py-2">
