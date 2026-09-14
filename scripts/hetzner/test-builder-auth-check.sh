@@ -15,6 +15,7 @@ run() { PROBE_OUTPUT="$1" PROBE_EXIT="${2:-0}" bash "$SCRIPT" --report 2>&1; }
 echo "→ the 2026-09-14 line is DISABLED, and the message says what to do"
 out=$(run "Your organization has disabled Claude subscription access for Claude Code · Use an Anthropic API key instead, or ask your admin to enable access" 1)
 has "$out" "^disabled:"
+has "$out" "ANTHROPIC_API_KEY"
 has "$out" "setup-token"
 has "$out" "loki-box-runner"
 
@@ -39,11 +40,12 @@ has "$out" "^ok:"
 
 echo "→ the runner env is read for the token but the token never appears in output"
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-printf 'CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-SECRETSECRET\n' > "$tmp/.env"
+printf 'ANTHROPIC_API_KEY=sk-ant-api03-SECRETSECRET\nCLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-ALSOSECRET\n' > "$tmp/.env"
 out=$(RUNNER_ENV="$tmp/.env" CLAUDE_BIN=/nonexistent/claude bash "$SCRIPT" --report 2>&1)
 has "$out" "^down:"
 has "$out" "claude CLI missing"
 hasnt "$out" "SECRETSECRET"
+hasnt "$out" "ALSOSECRET"
 
 echo
 echo "builder-auth-check: passed $pass, failed $fail"

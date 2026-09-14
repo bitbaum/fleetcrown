@@ -41,12 +41,20 @@ probe() {
     printf '%s' "$PROBE_OUTPUT"
     return "${PROBE_EXIT:-0}"
   fi
-  local tok
+  local key tok
+  key=$(grep -oE '^ANTHROPIC_API_KEY="?[^" ]*' "$RUNNER_ENV" 2>/dev/null | sed -E 's/^ANTHROPIC_API_KEY="?//')
   tok=$(grep -oE '^CLAUDE_CODE_OAUTH_TOKEN="?[^" ]*' "$RUNNER_ENV" 2>/dev/null | sed -E 's/^CLAUDE_CODE_OAUTH_TOKEN="?//')
-  [ -n "$tok" ] || { echo "no CLAUDE_CODE_OAUTH_TOKEN in $RUNNER_ENV"; return 3; }
+  [ -n "$key$tok" ] || { echo "no ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN in $RUNNER_ENV"; return 3; }
   [ -x "$CLAUDE_BIN" ] || { echo "claude CLI missing at $CLAUDE_BIN"; return 3; }
-  cd /tmp && timeout "$PROBE_TIMEOUT" env HOME=/home/ubuntu CLAUDE_CODE_OAUTH_TOKEN="$tok" \
-    "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
+  # Same precedence as the runner: an API key (the sanctioned automated path)
+  # wins over a subscription token.
+  if [ -n "$key" ]; then
+    cd /tmp && timeout "$PROBE_TIMEOUT" env HOME=/home/ubuntu ANTHROPIC_API_KEY="$key" \
+      "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
+  else
+    cd /tmp && timeout "$PROBE_TIMEOUT" env HOME=/home/ubuntu CLAUDE_CODE_OAUTH_TOKEN="$tok" \
+      "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
+  fi
 }
 
 out=$(probe); code=$?
@@ -64,7 +72,7 @@ fi
 
 case "$state" in
   ok)       msg="builder auth ok — Claude Code answered with the runner's token" ;;
-  disabled) msg="builder auth DISABLED — Claude Code refused the runner's token: \"$first\". Mint a new one: laptop \`claude setup-token\` (on the CURRENT Claude account) → /opt/loki/runner/.env CLAUDE_CODE_OAUTH_TOKEN → systemctl restart loki-box-runner. Until then every dispatch hangs and times out." ;;
+  disabled) msg="builder auth DISABLED — Claude Code refused the runner's token: \"$first\". Fix: put an Anthropic API key with a spending cap in /opt/loki/runner/.env as ANTHROPIC_API_KEY (the automated path must not ride a person's subscription — see docs/development/cloud-local-workflows.md), or for your own interactive builds re-mint a subscription token with \`claude setup-token\` on the CURRENT Claude account into CLAUDE_CODE_OAUTH_TOKEN; then systemctl restart loki-box-runner. Until then every dispatch hangs and times out." ;;
   down)     msg="builder probe got no answer (exit $code): \"$first\"" ;;
 esac
 
