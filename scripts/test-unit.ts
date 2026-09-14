@@ -28,6 +28,8 @@ const SKIP: Record<string, string> = {
   "print-session-token.ts": "helper — prints a token, not a test",
   "print-private-zone-cookie.ts": "helper — prints the private-zone unlock, not a test",
   "authenticated-smoke.ts": "needs a running server + LOKI_SESSION_TOKEN (pre-push/prod dogfood)",
+  "loki-loop-e2e.ts":
+    "end-to-end against a real deployment + LOKI_SESSION_TOKEN (pnpm run test:e2e:loki)",
   "rag-retrieval.ts": "needs EMBEDDINGS_BASE_URL (fastembed service)",
   // push-notifications.ts was here, excluded as "needs push/web-push env —
   // run manually". It never needed env: every check is a static file read. It

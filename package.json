@@ -64,6 +64,8 @@
     "dogfood:ui-flows:ci": "LOKI_SESSION_TOKEN=$(npx tsx scripts/test/print-session-token.ts) HEADLESS=1 node scripts/ui-flow-dogfood.mjs",
     "dogfood:machine:ci": "LOKI_SESSION_TOKEN=$(npx tsx scripts/test/print-session-token.ts) HEADLESS=1 node scripts/machine-dogfood.mjs",
     "dogfood:self": "node scripts/loki-self-dogfood.mjs",
+    "test:e2e:loki": "tsx scripts/test/loki-loop-e2e.ts",
+    "test:e2e:loki:dispatch": "tsx scripts/test/loki-loop-e2e.ts --dispatch",
     "test:dispatch-status": "npx tsx scripts/test/dispatch-status.ts",
     "test:fleet-context": "npx tsx scripts/test/fleet-context.ts",
     "test:execution-access": "npx tsx scripts/test/execution-access.ts",
