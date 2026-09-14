@@ -82,6 +82,9 @@ const PUBLIC: Record<string, string> = {
   "fleet/register":
     "public register of the studio's projects. The payload is repo names, public URLs, who a site is for, and whether a public profile exists — all visible by opening the site itself. Commercial terms (apps.conf's plan/price) are deliberately NOT joined onto the row; buildFleetRegister omits them and scripts/test/fleet-register.ts asserts their absence, so 'nothing private here' stays a checked claim rather than a remembered intention. Scoped to the studio owner, cached 5 min.",
 
+  "fleet/map":
+    "public map of the studio's projects — the register above plus each project's purpose line, layer, hosting state, public doors, and what last moved on it (dev-log headline, last run outcome, open-run count). All of it is already published on the project pages and the register; prices, paths and tokens stay out. bitbaum renders it and the knowledge index embeds it, so a session would put a private copy on every consumer. Owner-scoped, cached 5 min.",
+
   // — The bearer IS the credential; there is no user to look up first.
   "invitations/[token]": "unguessable invite token in the path is the credential",
   "invitations/[token]/accept": "same token; accepting is what creates the membership",

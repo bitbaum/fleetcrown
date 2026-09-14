@@ -33,6 +33,7 @@ export type KnowledgeSourceType =
   | "entity"
   | "commitment"
   | "thought"
+  | "fleet_map"
   | "repo_doc";
 
 export type KnowledgeItem = {
