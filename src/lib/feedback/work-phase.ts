@@ -10,7 +10,6 @@
 import { FEEDBACK_STATUS, type FeedbackStatus } from "@/lib/constants/statuses";
 import { ORCH_STATE, type OrchestrationState } from "@/lib/orchestration/contract";
 import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
-import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { isRunProgressFresh, RUN_PROGRESS_FRESH_MS } from "@/lib/run-progress";
 import { FIX_SHIP_STATE, firstSentence, type FixShipping } from "@/lib/feedback/fix-shipping";
 import { autoShipHoldNote, type AutoShipHold } from "@/lib/feedback/auto-ship";
@@ -204,28 +203,21 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "No run record for this fix — it isn't executing. Retry to queue it again.",
+      detail: "Retry",
     };
   }
 
   const since = run.deliveredAt ?? run.startedAt.toISOString();
-  if (run.state === ORCH_STATE.RUNNING) {
-    return {
-      phase: FEEDBACK_WORK_PHASE.WORKING,
-      label: `Working · ${workElapsedLabel(since, now)}`,
-      detail: `Agent is generating — Watch opens its terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
-      watchable: true,
-      since,
-      lastActivityAt: run.lastProgressAt,
-    };
-  }
+  // RUNNING is a claim, not evidence of life. A delivered inject with no PTY
+  // (live: "No session named Heidi on Cloud") used to sit on Working for tens
+  // of minutes. Working requires a fresh runner heartbeat — bytes from a real
+  // agent PTY — which is decided in the progress block below.
 
   if (run.outcome === ORCHESTRATION_OUTCOME.UNCONFIRMED) {
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Never started",
-      detail:
-        "The prompt was injected but the agent was never seen picking it up. Nothing ran, so there is no result to read — retry it.",
+      detail: "Retry",
       diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
@@ -239,7 +231,7 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
-      detail: "The run ended without a successful fix. Retry or Watch Terminal.",
+      detail: "Retry",
       diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
@@ -261,7 +253,7 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.FAILED,
       label: "Failed",
-      detail: "Run finished without success. Retry or Watch Terminal.",
+      detail: "Retry",
       diagnostic: run.error?.slice(0, 400) ?? null,
     };
   }
@@ -272,14 +264,15 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "Queued, but no agent picked it up. Open Control — Retry if it stays.",
+      detail: "Retry — Telegram if the builder stays offline",
     };
   }
   if (!run.deliveredAt) {
     return {
       phase: FEEDBACK_WORK_PHASE.QUEUED,
       label: "Queued",
-      detail: `Starting — waiting for the agent to pick it up. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+      // Badge is enough while the machine moves; Telegram interrupts when stuck.
+      detail: null,
     };
   }
   // A quiet agent that is quiet FOR A REASON. This outranks every other
@@ -291,8 +284,7 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Needs you to sign in",
-      detail:
-        "The agent is waiting at a sign-in prompt and cannot start until someone answers it. Watch opens its terminal — sign in there and it carries on.",
+      detail: "Sign in on Watch",
       watchable: true,
       since,
       lastActivityAt: run.lastProgressAt,
@@ -307,20 +299,22 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.WORKING,
       label: `Working · ${workElapsedLabel(since, now)}`,
-      detail: `Agent output ${workElapsedLabel(run.lastProgressAt!, now)} ago — Watch opens its terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+      detail: null,
       watchable: true,
       since,
       lastActivityAt: run.lastProgressAt,
+      diagnostic: `Last output ${workElapsedLabel(run.lastProgressAt!, now)} ago`,
     };
   }
   if (run.lastProgressAt) {
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Stalled",
-      detail: `Worked for ${workElapsedLabel(since, run.lastProgressAt ? Date.parse(run.lastProgressAt) : now)}, then nothing for ${workElapsedLabel(run.lastProgressAt, now)}. Watch its terminal — it may be waiting on you — or Retry.`,
+      detail: "Retry or Watch",
       watchable: true,
       since,
       lastActivityAt: run.lastProgressAt,
+      diagnostic: `Worked ${workElapsedLabel(since, Date.parse(run.lastProgressAt))}, silent ${workElapsedLabel(run.lastProgressAt, now)}`,
     };
   }
   const sinceDeliveryMs = now - Date.parse(run.deliveredAt);
@@ -328,15 +322,19 @@ function derivePhase(
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: `Prompt delivered ${workElapsedLabel(run.deliveredAt, now)} ago, but the agent never reported any output. Watch its terminal, or Retry.`,
+      detail: "Retry — Telegram when builder is back",
       watchable: true,
       since,
+      diagnostic: `Delivered ${workElapsedLabel(run.deliveredAt, now)} ago; no PTY output`,
     };
   }
+  // Delivered with no heartbeat yet: Starting, not Working. Working means a
+  // real PTY is printing. "Prompt delivered — waiting for first output" as
+  // Working was the phone lie when Cloud had no Heidi session at all.
   return {
-    phase: FEEDBACK_WORK_PHASE.WORKING,
-    label: `Working · ${workElapsedLabel(since, now)}`,
-    detail: `Prompt delivered — waiting for the first output. Watch opens its terminal. ${EXECUTOR_COPY.honesty.notificationWhenDone}`,
+    phase: FEEDBACK_WORK_PHASE.QUEUED,
+    label: "Starting",
+    detail: null,
     watchable: true,
     since,
   };

@@ -23,13 +23,19 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { ORCH_STATE } from "@/lib/orchestration/contract";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
-import { coldStartWorkspaceDir, pickDispatchChannel } from "@/lib/execution-access";
+import {
+  coldStartWorkspaceDir,
+  pickDispatchChannel,
+  projectChannelLock,
+} from "@/lib/execution-access";
+import type { RunnerChannel } from "@/db/schema/pending-commands";
 import {
   createOrchestrationEvent,
   createOrchestrationEventOnce,
 } from "@/db/queries/orchestration-events";
 import {
   createOrchestrationRun,
+  closeRunUndelivered,
   isProjectBusy,
   stampRunDelivered,
 } from "@/db/queries/orchestration-runs";
@@ -70,6 +76,18 @@ export type InjectParams = {
   conversationId?: string;
   /** Claude's native session identity. Tabs remain transport only. */
   sessionId?: string;
+  /**
+   * Prefer this builder when the project is not locus-locked. Phone Implement
+   * passes "cloud" so work lands on the always-on box-runner instead of a
+   * laptop whose lid is closed (builder_pref: local).
+   */
+  builderChannel?: RunnerChannel;
+  /**
+   * When true, a queued dispatch with no live builder and no hosted fallback
+   * fails instead of sitting "Queued / Not running" forever. Boss-mode: attach
+   * to a real worker or say what to do next — never queue into the void.
+   */
+  refuseOfflineQueue?: boolean;
 };
 
 export type InjectResult = { status: number; body: Record<string, unknown> };
@@ -371,7 +389,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // work the desktop just claimed. The answer is stored on the project (locus
   // lock, then builder_pref, then the cloud floor) — never guessed from which
   // runner happens to be online.
-  const pinnedChannel = pickDispatchChannel(dbMatch);
+  // Locus lock always wins. Otherwise a caller-preferred channel (feedback
+  // Implement → cloud) overrides the stored laptop pref so phone taps do not
+  // queue for a machine nobody is watching.
+  const pinnedChannel =
+    projectChannelLock(dbMatch) ?? params.builderChannel ?? pickDispatchChannel(dbMatch);
 
   const result = await executeInject(
     {
@@ -605,6 +627,32 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         `hosted-dispatch:${hostedDispatchId}`,
       ).catch((err) => console.error("[inject] hosted event emit failed:", err));
     }
+  }
+
+  // Boss-mode: never accept "Queued" when no builder will pick it up. Close the
+  // tracked run so feedback does not sit Working/Not running with no PTY, and
+  // return one next action the operator can take from Telegram/phone.
+  if (params.refuseOfflineQueue && queuedOffline && !hostedDispatchId) {
+    if (runId) {
+      await closeRunUndelivered(
+        runId,
+        userId,
+        "No builder online (cloud box-runner / Fleet Runner) to claim the command",
+      ).catch((err) => console.error("[inject] close undelivered failed:", err));
+    }
+    return {
+      status: 503,
+      body: {
+        ok: false,
+        error: "No builder is online to run this.",
+        nextAction:
+          "Cloud builder is offline. Ensure loki-box-runner is active on the box, or open Fleet Runner — then tap Implement again.",
+        code: "builder-offline",
+        warning: "runner-offline",
+        channel: pinnedChannel,
+        ...(runId ? { runId } : {}),
+      },
+    };
   }
 
   return {

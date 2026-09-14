@@ -79,6 +79,10 @@ export const ALERT_TYPES = {
     label: "A merged fix failed to deploy — the site still shows the old version",
     producer: "src/lib/feedback/notify-shipped.ts",
   },
+  feedback_needs_you: {
+    label: "Feedback work stalled or needs Check live",
+    producer: "src/lib/feedback/notify-needs-you.ts",
+  },
 } as const satisfies Record<string, AlertTypeSpec>;
 
 export type AlertType = keyof typeof ALERT_TYPES;
