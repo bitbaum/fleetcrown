@@ -305,6 +305,7 @@ async function main() {
         "why did we choose pgvector",
         "what could I build for someone",
         "list my projects",
+        "what do we have, name the three pillars",
         "zxcvbnm",
       ];
       const reached = new Set<string>();
