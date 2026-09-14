@@ -129,8 +129,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Snapshot outcome fields BEFORE the accept type-guard — it narrows body to
   // { runId } and TypeScript then forgets mode / hosted / nextAction.
   const mode = typeof body.mode === "string" ? body.mode : null;
-  const hostedDispatchId =
-    typeof body.hostedDispatchId === "string" ? body.hostedDispatchId : null;
+  const hostedDispatchId = typeof body.hostedDispatchId === "string" ? body.hostedDispatchId : null;
   const nextAction = typeof body.nextAction === "string" ? body.nextAction : null;
 
   const accepted = feedbackInjectAccepted(status, body);
