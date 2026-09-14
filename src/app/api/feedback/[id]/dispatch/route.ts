@@ -82,7 +82,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       : null;
     const work = deriveFeedbackWork(row.feedback.status, runToFeedbackSnapshot(run));
     if (work.phase === FEEDBACK_WORK_PHASE.QUEUED || work.phase === FEEDBACK_WORK_PHASE.WORKING) {
-      return jsonError("Already working on this — open Control to watch", 409);
+      return jsonError(
+        "Already on this — Watch the terminal, or wait for Telegram when it needs you / stalls.",
+        409,
+      );
     }
   }
 
@@ -97,11 +100,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         )
       : null;
 
+  // Prefer the always-on box (cloud). Hosted Hermes is the offline backup so
+  // Implement never sits Queued with no pickup. refuseOfflineQueue fails with
+  // one next action when neither path can run — never "Working" with no PTY.
   const { status, body } = await injectPrompt(
     {
       tab: row.projectName,
       projectId: row.feedback.projectId,
-      allowHostedFallback: false,
+      allowHostedFallback: true,
+      refuseOfflineQueue: true,
+      builderChannel: "cloud",
       adapter,
       sessionId: currentSession?.sessionId,
       customPrompt: composeFeedbackFixPrompt(
@@ -125,17 +133,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Return detailed error messages to help the operator understand what went wrong
+  const workLabel = accepted
+    ? body.mode === "direct"
+      ? "Working"
+      : body.hostedDispatchId
+        ? "Queued on hosted runner"
+        : "Queued"
+    : undefined;
+
   return NextResponse.json(
     {
       ...body,
       adapter,
       sessionId: currentSession?.sessionId ?? null,
       sessionAction: adapter === "claude" ? (currentSession ? "resumed" : "started") : "started",
-      workLabel: accepted ? "Queued" : undefined,
+      workLabel,
       // Add helpful context for common failures
       ...(status === 404 && {
         hint: "The project may need to be registered on the Projects page, or the agent may need to be started.",
       }),
+      ...(typeof body.nextAction === "string" && { nextAction: body.nextAction }),
     },
     {
       // Keep blocked (user-typing) at its inject status so the UI can warn.

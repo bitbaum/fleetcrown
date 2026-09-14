@@ -48,6 +48,7 @@ message; test runs (`ALERT_DRY_RUN=1`) never deliver.
 | Telemetry stale | Runner telemetry stops arriving | `src/app/api/crons/check-telemetry/route.ts` |
 | Runner stalled / wrong version | Box-runner stops claiming or lags the shipped version | `src/app/api/crons/check-runner-stall/route.ts`, `src/app/api/crons/check-runner-version/route.ts` |
 | Approvals waiting | Proposed actions sit undecided | `src/app/api/crons/check-pending-approvals/route.ts` |
+| Feedback needs you (stalled Implement / no agent / Check live) | A dispatched fix is stuck or live and waiting for Confirm — one ping when the flag goes up | `src/app/api/crons/check-feedback-needs-you/route.ts`, `src/lib/feedback/notify-needs-you.ts` |
 | Model id rot | A configured model id stops resolving | `src/app/api/crons/check-model-ids/route.ts` |
 | Run escalation | A run needs the operator's decision to proceed | `src/db/queries/run-escalations.ts` |
 | 📊 Ledger-ready (one-shot) | Run ledger reaches the improver threshold; self-disables after firing | `scripts/hetzner/ledger-ready-gate.sh` |

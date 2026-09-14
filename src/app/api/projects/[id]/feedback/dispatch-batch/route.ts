@@ -50,7 +50,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     {
       tab: project.name,
       projectId: idOrResp,
-      allowHostedFallback: false,
+      allowHostedFallback: true,
+      refuseOfflineQueue: true,
+      builderChannel: "cloud",
       customPrompt: prompt,
       notifyOnClose: true,
     },

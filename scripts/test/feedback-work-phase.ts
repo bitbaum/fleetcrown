@@ -54,10 +54,22 @@ assert.equal(
   "run-less dispatched row must be STUCK (retryable)",
 );
 
-// Live states.
+// Live states — RUNNING alone is not Working; Working needs a fresh PTY heartbeat.
 assert.equal(
   deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ state: ORCH_STATE.RUNNING })).phase,
-  FEEDBACK_WORK_PHASE.WORKING,
+  FEEDBACK_WORK_PHASE.QUEUED,
+  "RUNNING with no delivery yet is Starting/Queued, not Working",
+);
+assert.equal(
+  deriveFeedbackWork(
+    FEEDBACK_STATUS.DISPATCHED,
+    snap({
+      state: ORCH_STATE.RUNNING,
+      deliveredAt: new Date(Date.now() - 40 * 60_000).toISOString(),
+    }),
+  ).phase,
+  FEEDBACK_WORK_PHASE.STUCK,
+  "RUNNING delivered long ago with no PTY output is Stuck, not Working",
 );
 assert.equal(
   deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap({ startedAt: new Date(Date.now() - 10_000) }))
@@ -78,8 +90,8 @@ assert.equal(
     FEEDBACK_STATUS.DISPATCHED,
     snap({ startedAt: new Date(Date.now() - 5 * 60_000), deliveredAt: new Date().toISOString() }),
   ).phase,
-  FEEDBACK_WORK_PHASE.WORKING,
-  "delivered within the thinking window is working",
+  FEEDBACK_WORK_PHASE.QUEUED,
+  "delivered within the thinking window with no PTY output is Starting, not Working",
 );
 assert.equal(
   deriveFeedbackWork(
@@ -283,9 +295,10 @@ console.log("✓ feedback work-phase tests passed");
     true,
     "Stalled still links the terminal — it may be waiting on a person",
   );
-  assert.match(stalled.detail ?? "", /Worked for 32 min, then nothing for 15 min/);
+  assert.equal(stalled.detail, "Retry or Watch");
+  assert.match(stalled.diagnostic ?? "", /Worked 32 min, silent 15 min/);
 
-  // Delivered and no heartbeat yet: Working for the grace window, then honest.
+  // Delivered and no heartbeat yet: Starting (Queued), never fake Working.
   const fresh = deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
     snap({
@@ -294,8 +307,8 @@ console.log("✓ feedback work-phase tests passed");
     }),
     now,
   );
-  assert.equal(fresh.phase, FEEDBACK_WORK_PHASE.WORKING);
-  assert.equal(fresh.label, "Working · 2 min");
+  assert.equal(fresh.phase, FEEDBACK_WORK_PHASE.QUEUED);
+  assert.equal(fresh.label, "Starting");
   const silent = deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
     snap({
@@ -338,7 +351,7 @@ console.log("✓ feedback work-phase tests passed");
   );
   assert.equal(blocked.label, "Needs you to sign in");
   assert.equal(blocked.watchable, true, "the terminal is where they sign in");
-  assert.match(blocked.detail ?? "", /sign-in prompt/);
+  assert.equal(blocked.detail, "Sign in on Watch");
 
   // Same run, no reason known: the old, honest-but-useless wording stands.
   const unexplained = deriveFeedbackWork(FEEDBACK_STATUS.DISPATCHED, snap(base), now);

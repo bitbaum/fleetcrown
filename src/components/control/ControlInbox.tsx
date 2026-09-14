@@ -562,7 +562,11 @@ function FeedbackTriage({
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
-                {work.detail && <p className="ui-inbox-row-detail line-clamp-2">{work.detail}</p>}
+                {/* Short next-action only when waiting on the operator. Moving
+                    work stays badge-only — Telegram is the interrupt. */}
+                {work.waitingOn === "you" && work.detail && (
+                  <p className="ui-inbox-row-detail line-clamp-2">{work.detail}</p>
+                )}
               </div>
               <ActionRail>
                 {(notStarted || broken) && (

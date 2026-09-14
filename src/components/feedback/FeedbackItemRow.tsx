@@ -47,16 +47,17 @@ export function FeedbackItemRow({
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
   const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
-  const controlHref = fleetSurfaceHref("control", projectName);
   const terminalHref = fleetSurfaceHref("terminal", projectName);
   // Terminal when there is a PTY to look at (the prompt reached an agent),
   // Control when there is not — Terminal is empty until a session exists.
   const watchLive = work.watchable === true;
-  const progressHref = watchLive ? terminalHref : controlHref;
-  const progressLabel = watchLive ? "Watch" : "Open on Control";
+  // Watch only when a PTY exists. No "Open on Control" babysitting — when the
+  // machine is moving the badge is enough; Telegram interrupts when stuck.
+  const progressHref = watchLive ? terminalHref : null;
+  const progressLabel = watchLive ? "Watch" : null;
   const progressTitle = watchLive
     ? (work.detail ?? "Open the agent's terminal")
-    : "Open this project on Control — Terminal is empty until a session is actually running";
+    : null;
   // Somewhere for an agent to work. Rows from the per-project inbox carry no
   // flag and keep the one-click Implement; the server refuses the same case.
   const runnable = "runnable" in f ? f.runnable !== false : true;
@@ -150,13 +151,15 @@ export function FeedbackItemRow({
             )}
             <span className="text-text-muted">{meta.join(" · ")}</span>
           </p>
-          {/* The phase's sentence only when it changes what the reader does
-              next: a failure or a stall. "Agent is generating…" is what the
-              Working badge already says. */}
-          {(failed ||
-            work.phase === FEEDBACK_WORK_PHASE.WORKING ||
-            work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY) &&
-            work.detail && <p className="mt-1 text-xs text-text-secondary">{work.detail}</p>}
+          {/* Primary surface: badge + one next action. No walls of text while
+              the machine moves — dig-in holds the why (diagnostic below). */}
+          {(failed || work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY) && work.detail && (
+            <p className="mt-1 text-xs text-text-secondary">{work.detail}</p>
+          )}
+          {(work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
+            work.phase === FEEDBACK_WORK_PHASE.WORKING) && (
+            <p className="mt-1 text-xs text-text-muted">Moving — Telegram when you need to</p>
+          )}
           {work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && work.didLine && (
             <p className="mt-0.5 text-xs text-text-tertiary" title="The agent's own account">
               Agent: {work.didLine}
@@ -236,9 +239,11 @@ export function FeedbackItemRow({
           ) : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
             work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
             <>
-              <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle}>
-                {progressLabel}
-              </a>
+              {progressHref && (
+                <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle ?? undefined}>
+                  {progressLabel}
+                </a>
+              )}
               <button
                 type="button"
                 onClick={onResolve}
@@ -252,9 +257,11 @@ export function FeedbackItemRow({
           ) : work.phase === FEEDBACK_WORK_PHASE.STUCK ||
             work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
             <>
-              <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle}>
-                {progressLabel}
-              </a>
+              {progressHref && (
+                <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle ?? undefined}>
+                  {progressLabel}
+                </a>
+              )}
               <button
                 type="button"
                 onClick={() => onDispatch()}
