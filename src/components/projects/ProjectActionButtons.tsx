@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Loader2, Play, Wrench } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Wrench, Zap } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
@@ -99,31 +100,45 @@ export function FixSignalButton({
   );
 }
 
-/** One-click dispatch of the queued next step from the Next card. */
-export function RunNextStepButton({
+/**
+ * The page's one "start work" control, rendered by ProjectBuildStatus whenever
+ * nothing is running. It used to be a text-xs "Run next step" inside the Next
+ * card — the same size as a chip, halfway down the page — so a person with an
+ * idle project asked why there was no big button. There is now; it is this.
+ * Same label as the kickoff hero, because it is the same act.
+ */
+export function MakeItHappenButton({
   projectId,
   workspaceKey,
+  kind,
 }: {
   projectId: string;
   workspaceKey: string;
+  /** `next_step` runs the queued step; `kickoff` briefs from the description. */
+  kind: Extract<ProjectDispatchKind, "next_step" | "kickoff">;
 }) {
+  const router = useRouter();
   const { state, dispatch } = useProjectDispatch(projectId);
 
   if (state.phase === "done") return <DispatchedNote workspaceKey={workspaceKey} />;
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex flex-col items-start gap-2 sm:items-end">
       <button
         type="button"
-        onClick={() => dispatch("next_step")}
+        onClick={async () => {
+          // The refresh re-derives the build status server-side, so the strip
+          // flips to "Starting up" from the run ledger, not from local state.
+          if (await dispatch(kind)) router.refresh();
+        }}
         disabled={state.phase === "sending"}
-        className="ui-btn-primary min-h-11 gap-1.5 px-3 text-xs"
+        className="ui-btn-primary min-h-12 gap-2 px-6 text-base"
       >
         {state.phase === "sending" ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
-          <Play className="h-3.5 w-3.5" aria-hidden="true" />
+          <Zap className="h-4 w-4" aria-hidden="true" />
         )}
-        {state.phase === "sending" ? "Queuing…" : "Run next step"}
+        {state.phase === "sending" ? "Making it happen…" : "Make it happen"}
       </button>
       {state.phase === "error" && <span className="ui-error text-xs">{state.message}</span>}
     </span>

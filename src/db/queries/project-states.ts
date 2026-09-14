@@ -365,6 +365,40 @@ export async function getProjectStateByProjectId(userId: string, projectId: stri
   return row ?? null;
 }
 
+/**
+ * The state row for a project, by entity id OR by any key a runner files it
+ * under (see `projectStateKeys`). Most rows carry no project id — the runner
+ * heartbeat keys by tab name, which is the checkout directory — so an id-only
+ * lookup returned null for 92 of 104 rows and the page reported "No live
+ * agent" while the runner's row said the opposite.
+ *
+ * When several rows match, the one a runner observed most recently wins: the
+ * dispatch-time stub keyed by display name has never been observed and must
+ * not outrank the row that is actually being heartbeated.
+ */
+export async function getProjectStateForProject(userId: string, projectId: string, keys: string[]) {
+  const lowered = [...new Set(keys.map((key) => key.trim().toLowerCase()).filter(Boolean))];
+  const byKey =
+    lowered.length > 0 ? inArray(sql`lower(${projectStates.projectKey})`, lowered) : undefined;
+  const rows = await db
+    .select()
+    .from(projectStates)
+    .where(
+      and(
+        eq(projectStates.userId, userId),
+        byKey
+          ? or(eq(projectStates.projectId, projectId), byKey)
+          : eq(projectStates.projectId, projectId),
+      ),
+    );
+  rows.sort(
+    (a, b) =>
+      (b.runtimeObservedAt?.getTime() ?? 0) - (a.runtimeObservedAt?.getTime() ?? 0) ||
+      (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0),
+  );
+  return rows[0] ?? null;
+}
+
 export async function getProjectStatesByUserId(
   userId: string,
 ): Promise<(typeof projectStates.$inferSelect)[]> {

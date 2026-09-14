@@ -18,6 +18,8 @@ import { FixSignalButton } from "./ProjectActionButtons";
 import { ProjectKickoff } from "./ProjectKickoff";
 import { AssistantContextBridge } from "./AssistantContextBridge";
 import { needsKickoff } from "@/lib/project-kickoff";
+import { deriveBuildStatus, isBuildActive } from "@/lib/project-build-status";
+import { ProjectBuildStatus } from "./ProjectBuildStatus";
 import { answer, cleanDescription } from "@/lib/project-display";
 import { formatBtc } from "@/lib/format";
 
@@ -58,8 +60,17 @@ export function ProjectWorkspaceView({
     dossier.orangecatLinks.find((link) => link.role === "funding") ??
     dossier.orangecatLinks.find((link) => link.role === "public_profile") ??
     dossier.orangecatLinks[0];
-  // Computed once: the hero and the "Run next step" button below it must never
-  // both offer themselves as the way to start this project.
+  // One derived answer to "is something being built?", from the runner's last
+  // observation and the run ledger. Both the strip at the top of Now and the
+  // kickoff gate read it, so they cannot disagree about whether to offer a
+  // button — the hero and the strip must never both offer themselves as the
+  // way to start this project.
+  const buildStatus = deriveBuildStatus({
+    state: dossier.state,
+    runs: dossier.runs,
+    commits: dossier.commits,
+    nowMs: dossier.builtAtMs,
+  });
   const showKickoff =
     !dossier.readonly &&
     needsKickoff({
@@ -67,7 +78,7 @@ export function ProjectWorkspaceView({
       goalCount: detail.linkedGoals.length,
       goalsLocked: detail.goalsLocked,
       hasRepo: Boolean(links.repo),
-      agentRunning: Boolean(dossier.state?.agentRunning),
+      agentRunning: isBuildActive(buildStatus),
     });
 
   return (
@@ -118,7 +129,8 @@ export function ProjectWorkspaceView({
           />
           {/* One visual tier only: the header offers destinations, not actions,
               so everything here is a quiet ghost link. The page's real CTA
-              (Kickoff / Run next step) lives in the content flow below — five
+              (Make it happen, in the build strip or the kickoff hero) lives in
+              the content flow below — five
               identical secondary buttons up here made it invisible.
               That was the stated rule but not the rendered one: LiveUrlField
               drew a bordered secondary button and OrangeCatPublishButton an
@@ -184,6 +196,14 @@ export function ProjectWorkspaceView({
             urgent: healthSignals.length > 0,
             content: (
               <>
+                <ProjectBuildStatus
+                  status={buildStatus}
+                  projectId={project.id}
+                  workspaceKey={workspaceKey}
+                  readonly={dossier.readonly}
+                  setupNeeded={showKickoff}
+                  hasNextStep={Boolean(nextStep)}
+                />
                 {!dossier.readonly && (
                   <ProjectKickoff
                     projectId={project.id}
@@ -237,7 +257,7 @@ export function ProjectWorkspaceView({
                       dossier={dossier}
                       interactive={false}
                       showGoals={false}
-                      dispatchable={!dossier.readonly && !showKickoff}
+                      ownerView={!dossier.readonly}
                     />
                   </div>
                 </section>

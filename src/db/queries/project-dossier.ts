@@ -20,7 +20,8 @@ import { resolveProjectDetailWithOrgFallback, type ProjectDetail } from "./proje
 import { db } from "@/db";
 import { entities, userProjects } from "@/db/schema";
 import { and, eq, ilike } from "drizzle-orm";
-import { getProjectStateByProjectId } from "./project-states";
+import { getProjectStateForProject } from "./project-states";
+import { projectStateKeys } from "@/lib/project-build-status";
 import { getProjectActivity, type ProjectActivityEvent } from "./activity";
 import {
   getProjectOrchestrationRuns,
@@ -52,7 +53,7 @@ export type ProjectDossier = {
   ownerId: string;
   /** Viewer is an org peer, not the owner — page renders read-only. */
   readonly: boolean;
-  state: Awaited<ReturnType<typeof getProjectStateByProjectId>> | null;
+  state: Awaited<ReturnType<typeof getProjectStateForProject>> | null;
   activity: ProjectActivityEvent[];
   runs: ProjectRunRow[];
   outcomes: RecentOutcome[];
@@ -83,13 +84,24 @@ export async function getProjectDossier(
   const { detail, ownerId } = resolved;
   const projectKey = detail.project.name;
 
-  const [state, activity, runs, outcomes, userProject] = await Promise.all([
-    getProjectStateByProjectId(ownerId, projectId).catch(() => null),
+  const [activity, runs, outcomes, userProject] = await Promise.all([
     getProjectActivity(ownerId, projectKey, { days: 90, limit: 60 }).catch(() => []),
     getProjectOrchestrationRuns(ownerId, projectId, 25).catch(() => []),
     getRecentOutcomes(ownerId, projectKey, { limit: 10 }).catch(() => []),
     getUserProjectByEntityId(ownerId, projectId).catch(() => null),
   ]);
+  // After userProject: the runner keys its row by the checkout directory, and
+  // only the catalog row knows what that is.
+  const state = await getProjectStateForProject(
+    ownerId,
+    projectId,
+    projectStateKeys({
+      name: projectKey,
+      userProjectName: userProject?.name,
+      dirPath: userProject?.dirPath,
+      gitUrl: userProject?.gitUrl ?? detail.project.gitUrl,
+    }),
+  ).catch(() => null);
 
   const gitUrl = userProject?.gitUrl ?? detail.project.gitUrl;
   const orangecatLinks = userProject
