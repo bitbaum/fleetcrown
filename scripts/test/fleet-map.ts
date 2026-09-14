@@ -143,6 +143,26 @@ check("a client site is owned by the client, not by us", () => {
   assert.equal(map.projects.find((p) => p.slug === "townsism")!.status, "not live");
 });
 
+check("no hosting row but a live URL counts as live; a timestamped dev log speaks in days", () => {
+  const hostless: RegisterRow = {
+    ...rows[1],
+    slug: "orangecat-hostless",
+    site: null,
+    loki: { id: "9", liveUrl: "https://orangecat.ch" },
+  };
+  const map = buildFleetMap(
+    [hostless],
+    new Map([
+      ["orangecat-hostless", { devLog: [{ date: "2026-09-12T19:59:17.000Z", done: "x" }] }],
+    ]),
+    new Map(),
+  );
+  assert.equal(map.projects[0]!.status, "live");
+  assert.equal(map.projects[0]!.urls.live, "https://orangecat.ch");
+  assert.equal(map.projects[0]!.now.lastLog?.date, "2026-09-12");
+  assert.equal(map.summary.live, 1);
+});
+
 check("the overview names every project once, with facts in a fixed order", () => {
   const map = buildFleetMap(
     rows,

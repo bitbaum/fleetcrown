@@ -120,13 +120,18 @@ export function buildFleetMap(
     const profile = profiles.get(row.slug);
     const act = activity.get(row.slug);
     const log = [...(profile?.devLog ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1))[0];
+    // Dev-log dates arrive as timestamps; the map speaks in days.
+    const logDate = log?.date ? log.date.slice(0, 10) : null;
     return {
       slug: row.slug,
       name: row.name,
       what: row.description,
       stack: profile?.stack?.trim() || null,
       layer: layerFor(row),
-      status: row.site?.status ?? "not live",
+      // A project with no hosting row but a live URL IS live (loki and orangecat
+      // are served from the main Caddyfile, not apps.conf); liveUrl is the SSOT
+      // for "is it served", the register row only adds kind/owner/since.
+      status: row.site?.status ?? (row.loki?.liveUrl ? "live" : "not live"),
       owner: row.site?.owner ?? "bitbaum",
       since: row.site?.since && row.site.since !== "-" ? row.site.since : null,
       urls: {
@@ -141,7 +146,7 @@ export function buildFleetMap(
         lastRun: act?.lastRun
           ? { outcome: act.lastRun.outcome, at: act.lastRun.at.toISOString() }
           : null,
-        lastLog: log?.done ? { date: log.date, done: log.done.trim() } : null,
+        lastLog: log?.done && logDate ? { date: logDate, done: log.done.trim() } : null,
       },
     };
   });
