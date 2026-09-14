@@ -15,8 +15,8 @@ import { timeAgo, formatDurationMinutes } from "@/lib/dates";
 import { DOSSIER_STALE_MS, answer } from "@/lib/project-display";
 import { APP_LOCALE } from "@/lib/constants";
 import { MINUTE_MS, WEEK_MS } from "@/lib/constants/time";
-import { RunNextStepButton } from "./ProjectActionButtons";
 import { SESSION_STATUS } from "@/lib/constants/statuses";
+import { isRuntimeObservationFresh } from "@/lib/project-session";
 
 const OUTCOME_TAG: Record<string, string> = {
   success: "ui-tag ui-tag-positive",
@@ -77,16 +77,21 @@ export function NowSection({
   // "Idle · last active 1mo ago" while 17 commits landed in two days.
   const lastCommitMs = dossier.commits?.[0]?.atMs ?? null;
   const commitFresher = lastCommitMs != null && (handoffMs == null || lastCommitMs > handoffMs);
+  // `agentRunning` is a runner's claim at push time; past the runner-offline
+  // threshold it is an expired claim. A slug-keyed row still said "running"
+  // two hours after its agent died and would have read as "Agent process
+  // running" here forever — sessionUpdatedAt was null, so `stale` never fired.
+  const agentLive = !!state?.agentRunning && isRuntimeObservationFresh(state, dossier.builtAtMs);
   const liveLabel = stale
     ? "Idle"
-    : state?.agentRunning
-      ? state.currentPromptLabel
+    : agentLive
+      ? state?.currentPromptLabel
         ? `Working — ${state.currentPromptLabel}`
         : "Agent process running"
       : state?.sessionStatus === SESSION_STATUS.READY
         ? "Ready for the next task"
         : "No live agent";
-  const liveActive = !stale && !!state?.agentRunning;
+  const liveActive = !stale && agentLive;
 
   // Stack is shown in the Technology card below — don't repeat it here.
   const briefRows: Array<[string, string]> = showBrief
@@ -177,13 +182,14 @@ export function NextSection({
   dossier,
   interactive = true,
   showGoals = true,
-  dispatchable = false,
+  ownerView = false,
 }: {
   dossier: ProjectDossier;
   interactive?: boolean;
   showGoals?: boolean;
-  /** Owner view: render the one-click "Run next step" dispatch. */
-  dispatchable?: boolean;
+  /** Owner view: the empty-state copy may point at the page's own controls.
+   *  The dispatch button itself lives in ProjectBuildStatus above — one CTA. */
+  ownerView?: boolean;
 }) {
   const latest = latestDevLog(dossier);
   const goals = dossier.detail.linkedGoals;
@@ -201,23 +207,15 @@ export function NextSection({
   return (
     <SectionShell kicker="Next" title="What happens next">
       {next ? (
-        <div className="space-y-2.5">
-          <p className="text-sm leading-relaxed text-text-primary">
-            <span className="font-medium text-accent-text">→ </span>
-            {next}
-          </p>
-          {dispatchable && (
-            <RunNextStepButton
-              projectId={dossier.detail.project.id}
-              workspaceKey={dossier.userProject?.name ?? dossier.detail.project.name}
-            />
-          )}
-        </div>
+        <p className="text-sm leading-relaxed text-text-primary">
+          <span className="font-medium text-accent-text">→ </span>
+          {next}
+        </p>
       ) : (
         // The old copy here sent people to another page to do the one thing
         // this page exists for. Point at the controls that are already on it.
         <p className="text-sm text-text-muted">
-          {dispatchable
+          {ownerView
             ? "No queued next step yet — set one under Plan, or let Make it happen derive one from the description."
             : "No queued next step recorded."}
         </p>
