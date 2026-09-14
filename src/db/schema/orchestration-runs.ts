@@ -56,6 +56,10 @@ export type OrchestrationRunPayload = {
    *  usually dispatched and walked away, which is the entire point of having an
    *  always-on builder. */
   notifyOnClose?: boolean;
+  /** The Loki conversation that dispatched this run. On close, the outcome is
+   *  written back into that thread (run-outcome-post.ts) so the person who
+   *  typed the request learns what happened without leaving the chat. */
+  conversationId?: string;
 };
 
 /** Canonical run outcome values live in @/lib/orchestration/contract (client-

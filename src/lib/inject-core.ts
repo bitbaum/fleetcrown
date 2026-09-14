@@ -65,6 +65,9 @@ export type InjectParams = {
   /** Push the close outcome to chat (Telegram). Set by chat-originated
    *  dispatches (Loki's fleet skill) — see lib/orchestration/notify-close.ts. */
   notifyOnClose?: boolean;
+  /** The Loki conversation this dispatch came from; the close outcome is
+   *  posted back into it. */
+  conversationId?: string;
   /** Claude's native session identity. Tabs remain transport only. */
   sessionId?: string;
 };
@@ -293,6 +296,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
           projectPath: resolvedProjectPath,
           model: eventModel,
           ...(params.notifyOnClose ? { notifyOnClose: true } : {}),
+          ...(params.conversationId ? { conversationId: params.conversationId } : {}),
         },
       });
       runId = run.id;

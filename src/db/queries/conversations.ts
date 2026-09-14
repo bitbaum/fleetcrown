@@ -103,7 +103,7 @@ export async function addMessage(
     meta,
   }: {
     role: "user" | "assistant" | "system";
-    kind?: "chat" | "command" | "dispatch";
+    kind?: "chat" | "command" | "dispatch" | "outcome";
     content: string;
     meta?: Record<string, unknown>;
   },
