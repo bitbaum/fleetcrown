@@ -35,6 +35,7 @@ message; test runs (`ALERT_DRY_RUN=1`) never deliver.
 | 🚨 Loki deploy: \<failure/rollback\> | A loki deploy fails or rolls back | `scripts/deploy-hetzner.sh` |
 | 🧩 \<app\>: \<runtime conformance finding\> | Deployed reality diverges from the register (wrong port, dead tunnel, inactive unit) | `scripts/hetzner/install-runtime-conformance.sh` |
 | 🧪 \<provider/model\>: \<n\> failure(s) in 24h | A model link keeps failing while the fallback chain hides it — Groq answered 400 to every structured Cat call for days and nothing said so | `scripts/hetzner/ai-provider-check.sh` (installed by `scripts/hetzner/install-ai-provider-watch.sh`) |
+| 🔑 builder auth DISABLED / 🔌 builder probe got no answer / ✅ RECOVERED | Hourly probe runs Claude Code with the box-runner’s own token; the token dies with the Claude account that minted it and every dispatch then hangs silently (2026-09-14) | `scripts/hetzner/builder-auth-check.sh` (installed by `scripts/hetzner/install-builder-auth-watch.sh`) |
 | 🚫/🧟 agent-work findings | Hourly sweep finds stranded/zombie agent work on the box | `scripts/hetzner/agent-work-check.sh` (installed by `scripts/hetzner/install-agent-work-watch.sh`) |
 | 🧹/🚨 DISK GC non-routine outcome | GC ran but the disk is still above the warn mark, or nothing was reclaimable (routine success is journal-only) | `scripts/hetzner/install-disk-gc.sh` |
 | Fleet refs audit findings | Deployed refs diverge from expected across the fleet | `scripts/hetzner/install-fleet-refs-audit.sh` |
