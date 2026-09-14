@@ -126,17 +126,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // (blocked: user typing). status < 400 alone is not enough: inject can answer
   // 200/ok when it refused mid-keystroke or when run-create failed — marking
   // those Queued/Working is the closed-loop lie.
+  // Snapshot outcome fields BEFORE the accept type-guard — it narrows body to
+  // { runId } and TypeScript then forgets mode / hosted / nextAction.
+  const mode = typeof body.mode === "string" ? body.mode : null;
+  const hostedDispatchId = typeof body.hostedDispatchId === "string" ? body.hostedDispatchId : null;
+  const nextAction = typeof body.nextAction === "string" ? body.nextAction : null;
+
   const accepted = feedbackInjectAccepted(status, body);
   const runId = accepted ? body.runId : undefined;
   if (accepted) {
     await setFeedbackStatus(userId, idOrResp, FEEDBACK_STATUS.DISPATCHED, runId);
   }
 
-  // Return detailed error messages to help the operator understand what went wrong
   const workLabel = accepted
-    ? body.mode === "direct"
+    ? mode === "direct"
       ? "Working"
-      : body.hostedDispatchId
+      : hostedDispatchId
         ? "Queued on hosted runner"
         : "Queued"
     : undefined;
@@ -152,7 +157,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ...(status === 404 && {
         hint: "The project may need to be registered on the Projects page, or the agent may need to be started.",
       }),
-      ...(typeof body.nextAction === "string" && { nextAction: body.nextAction }),
+      ...(nextAction && { nextAction }),
     },
     {
       // Keep blocked (user-typing) at its inject status so the UI can warn.

@@ -55,9 +55,7 @@ export function FeedbackItemRow({
   // machine is moving the badge is enough; Telegram interrupts when stuck.
   const progressHref = watchLive ? terminalHref : null;
   const progressLabel = watchLive ? "Watch" : null;
-  const progressTitle = watchLive
-    ? (work.detail ?? "Open the agent's terminal")
-    : null;
+  const progressTitle = watchLive ? (work.detail ?? "Open the agent's terminal") : null;
   // Somewhere for an agent to work. Rows from the per-project inbox carry no
   // flag and keep the one-click Implement; the server refuses the same case.
   const runnable = "runnable" in f ? f.runnable !== false : true;
@@ -240,7 +238,11 @@ export function FeedbackItemRow({
             work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
             <>
               {progressHref && (
-                <a href={progressHref} className="ui-btn-save gap-1" title={progressTitle ?? undefined}>
+                <a
+                  href={progressHref}
+                  className="ui-btn-save gap-1"
+                  title={progressTitle ?? undefined}
+                >
                   {progressLabel}
                 </a>
               )}
@@ -258,7 +260,11 @@ export function FeedbackItemRow({
             work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
             <>
               {progressHref && (
-                <a href={progressHref} className="ui-btn-secondary gap-1" title={progressTitle ?? undefined}>
+                <a
+                  href={progressHref}
+                  className="ui-btn-secondary gap-1"
+                  title={progressTitle ?? undefined}
+                >
                   {progressLabel}
                 </a>
               )}
