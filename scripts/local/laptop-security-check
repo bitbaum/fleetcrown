@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+#
+# Threat detection for the operator's own machine — the one that holds the SSH
+# key to the box, the GitHub token with admin:org, the npm token and 1.7 GB of
+# agent transcripts. The box watches itself (install-security-watch.sh); this
+# is the same idea for the laptop, as an unprivileged user, every 30 minutes.
+#
+# Speaks only on CHANGE against a baseline seeded silently on the first run,
+# and only about things the operator must act on:
+#   - a new program listening on a non-loopback port (something on this laptop
+#     is reachable from the network that was not before)
+#   - sshd starting on the laptop (it should never run here)
+#   - the screen lock switched off, or the idle delay raised past 15 minutes
+#   - unattended security upgrades switched off
+#   - a change to ~/.ssh (new key, new authorized_keys, permissions opened)
+#   - a new login account on the machine
+#   - the GitHub CLI logged in as a different account, or logged out
+#   - a kernel/security update waiting on a reboot for more than a week
+#
+# Delivery: the box's own alert path (lib-alert.sh over SSH → Telegram, with
+# its dedupe and journal), so this has no Telegram credential of its own and
+# the same message is never sent twice. If the box is unreachable, a desktop
+# notification stands in — the finding is not lost, it is on the screen.
+#
+# Baselines: ~/.local/state/laptop-security-check/. --dry-run delivers nothing.
+# Scheduled by the user timer laptop-security-check.timer (install: see the
+# bottom of this file). Symlinked to ~/.local/bin/laptop-security-check.
+set -uo pipefail
+
+DRY_RUN=""; [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
+S="${XDG_STATE_HOME:-$HOME/.local/state}/laptop-security-check${DRY_RUN:+/dry-run}"
+mkdir -p "$S"
+FIRST=0; [ -f "$S/seeded" ] || FIRST=1
+BOX_SSH="ssh -o BatchMode=yes -o ConnectTimeout=8 ubuntu@167.233.22.31"
+findings=()
+
+set_diff() {  # <baseline> <current> → lines new in current; replaces baseline
+  local base="$1" cur="$2"; sort -u -o "$cur" "$cur"
+  if [ "$FIRST" = 1 ] || [ ! -f "$base" ]; then cp "$cur" "$base"; return 0; fi
+  comm -13 "$base" "$cur"; cp "$cur" "$base"
+}
+# transition <key> <bad|ok> <text> → records a finding only when the state flips to bad
+transition() {
+  local key="$1" state="$2" text="$3"
+  local f="$S/state_$key" prev="ok"
+  [ -f "$f" ] && prev=$(cat "$f")
+  printf '%s' "$state" > "$f"
+  [ "$FIRST" = 1 ] && return 0
+  [ "$state" = bad ] && [ "$prev" != bad ] && findings+=("$text")
+  return 0
+}
+
+# 1) Listeners reachable from the network.
+if lst=$(ss -tulnH 2>/dev/null); then
+  printf '%s\n' "$lst" | awk '$5 !~ /^(127\.|\[::1\]|\[::ffff:127)/ {split($5,a,":"); print $1 ":" a[length(a)]}' | sort -u > "$S/ports.cur"
+  new=$(set_diff "$S/ports" "$S/ports.cur")
+  [ -n "$new" ] && findings+=("🔌 laptop: NEW PORT open to the network: $(echo "$new" | tr '\n' ' '). Find it: ss -tulnp | grep <port>")
+fi
+
+# 2) sshd should never run on the laptop.
+if systemctl is-active --quiet ssh 2>/dev/null || systemctl is-active --quiet sshd 2>/dev/null; then
+  transition sshd bad "🔓 laptop: sshd is RUNNING — the laptop accepts SSH logins. Stop it: sudo systemctl disable --now ssh"
+else transition sshd ok ""; fi
+
+# 3) Screen lock and idle delay (GNOME); silently skipped on other desktops.
+if command -v gsettings >/dev/null 2>&1 && gsettings get org.gnome.desktop.screensaver lock-enabled >/dev/null 2>&1; then
+  lock=$(gsettings get org.gnome.desktop.screensaver lock-enabled 2>/dev/null)
+  idle=$(gsettings get org.gnome.desktop.session idle-delay 2>/dev/null | tr -dc '0-9')
+  if [ "$lock" != "true" ] || [ "${idle:-0}" -eq 0 ] || [ "${idle:-0}" -gt 900 ]; then
+    transition lock bad "🖥️ laptop: screen lock is off or idle delay is ${idle:-?}s — an unattended laptop is an open session. Fix: gsettings set org.gnome.desktop.screensaver lock-enabled true; gsettings set org.gnome.desktop.session idle-delay 300"
+  else transition lock ok ""; fi
+fi
+
+# 4) Automatic security upgrades.
+if grep -qs 'Unattended-Upgrade "1"' /etc/apt/apt.conf.d/20auto-upgrades; then transition upgrades ok ""
+else transition upgrades bad "🛡️ laptop: unattended security upgrades are OFF. Fix: sudo dpkg-reconfigure -plow unattended-upgrades"; fi
+
+# 5) ~/.ssh: keys, authorized_keys, config, permissions.
+if [ -d "$HOME/.ssh" ]; then
+  { stat -c '%a %n' "$HOME/.ssh"; find "$HOME/.ssh" -maxdepth 1 -type f -exec sha256sum {} + 2>/dev/null | cut -c1-16,66-; find "$HOME/.ssh" -maxdepth 1 -type f -exec stat -c '%a %n' {} + 2>/dev/null; } | sort > "$S/ssh.cur"
+  if [ "$FIRST" = 1 ] || [ ! -f "$S/ssh" ]; then cp "$S/ssh.cur" "$S/ssh"
+  elif ! cmp -s "$S/ssh" "$S/ssh.cur"; then
+    ch=$(comm -13 "$S/ssh" "$S/ssh.cur" | awk '{print $NF}' | sort -u | xargs -n1 basename 2>/dev/null | tr '\n' ' ')
+    findings+=("🔑 laptop: ~/.ssh changed: ${ch:-(removal)}. If this was not you: check ls -la ~/.ssh and rotate the box key")
+    cp "$S/ssh.cur" "$S/ssh"
+  fi
+  perm=$(stat -c %a "$HOME/.ssh"); [ "$perm" = 700 ] || { transition sshperm bad "🔑 laptop: ~/.ssh is mode $perm (should be 700). Fix: chmod 700 ~/.ssh"; }
+  [ "$perm" = 700 ] && transition sshperm ok ""
+fi
+
+# 6) Login accounts.
+awk -F: '$7 ~ /sh$/ && $3 >= 1000 {print $1}' /etc/passwd | sort > "$S/users.cur"
+new=$(set_diff "$S/users" "$S/users.cur")
+[ -n "$new" ] && findings+=("👤 laptop: NEW LOGIN ACCOUNT: $(echo "$new" | tr '\n' ' '). If not you: sudo deluser <name>")
+
+# 7) GitHub CLI identity — the token with admin:org lives here.
+if command -v gh >/dev/null 2>&1; then
+  who=$(gh api user --jq .login 2>/dev/null || echo "logged-out")
+  printf '%s\n' "$who" > "$S/gh.cur"
+  if [ "$FIRST" = 1 ] || [ ! -f "$S/gh" ]; then cp "$S/gh.cur" "$S/gh"
+  elif ! cmp -s "$S/gh" "$S/gh.cur"; then
+    findings+=("🐙 laptop: gh is now '$who' (was '$(cat "$S/gh")'). If not you: gh auth logout, then revoke at https://github.com/settings/tokens")
+    cp "$S/gh.cur" "$S/gh"
+  fi
+fi
+
+# 8) Reboot pending for more than a week (kernel patch not live until then).
+if [ -f /var/run/reboot-required ]; then
+  age=$(( ($(date +%s) - $(stat -c %Y /var/run/reboot-required)) / 86400 ))
+  if [ "$age" -ge 7 ]; then
+    stamp="$S/reboot_paged"; last=$(cat "$stamp" 2>/dev/null | tr -dc '0-9')
+    if [ -z "$last" ] || [ $(( $(date +%s) - last )) -gt 604800 ]; then
+      findings+=("♻️ laptop: reboot pending for ${age} days (security patch not live). When convenient: reboot"); date +%s > "$stamp"
+    fi
+  fi
+fi
+
+touch "$S/seeded"
+[ ${#findings[@]} -eq 0 ] && exit 0
+
+for f in "${findings[@]}"; do
+  echo "laptop-security-check: $f" >&2
+  if [ -n "$DRY_RUN" ]; then continue; fi
+  # Blessed path: the box's lib-alert (dedupe + journal + Telegram). Nothing
+  # else here knows a Telegram credential.
+  if ! printf '%s' "$f" | $BOX_SSH 'sudo bash -c ". /opt/monitoring/lib-alert.sh; text=\$(cat); alert \"\" \"\$text\""' 2>/dev/null; then
+    notify-send -u critical -i dialog-warning "Laptop security" "$f" 2>/dev/null || true
+  fi
+done
+exit 0
+
+# ── Install (once) ───────────────────────────────────────────────────────────
+#   ln -sf ~/dev/loki/scripts/local/laptop-security-check ~/.local/bin/laptop-security-check
+#   ~/.config/systemd/user/laptop-security-check.service:
+#     [Unit]\nDescription=Laptop threat detection\n[Service]\nType=oneshot\nExecStart=%h/.local/bin/laptop-security-check
+#   ~/.config/systemd/user/laptop-security-check.timer:
+#     [Unit]\nDescription=Run laptop-security-check every 30 min\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec=30min\nPersistent=true\n[Install]\nWantedBy=timers.target
+#   systemctl --user daemon-reload && systemctl --user enable --now laptop-security-check.timer
