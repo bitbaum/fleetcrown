@@ -64,8 +64,12 @@ probe() {
       echo "no env credential and no sign-in at $RUNNER_HOME/.claude — run 'claude' once as $RUNNER_USER on the box"
       return 3
     }
-    timeout "$PROBE_TIMEOUT" sudo -u "$RUNNER_USER" -H env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY \
-      "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
+    # Through a LOGIN shell, because that is how the runner launches an agent
+    # (`bash -lic`), and a login shell sources ~/.bashrc — which on 2026-09-15
+    # still exported the retired account's token. A probe that skipped the
+    # profile said "ok" while every real agent was refused.
+    timeout "$PROBE_TIMEOUT" sudo -u "$RUNNER_USER" -H bash -lc \
+      "\"$CLAUDE_BIN\" -p \"reply with the single word ok\" --output-format text" 2>&1
   fi
 }
 
