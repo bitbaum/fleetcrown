@@ -4,7 +4,7 @@
  * Mirrors normalizeUsername (lib/username.ts). Without this, project names
  * drifted between deployments — the local dev DB held Title-case names
  * ("Loki", "Revamp-Info", "AOZ") while the production box held lowercase
- * slugs ("loki", "revamp-info", "aoz-housing"), so the same project read
+ * slugs ("loki", "revamp-info", "aoz-begleitung"), so the same project read
  * differently in the web app vs the desktop. Enforcing one canonical form on
  * every registration keeps the registry consistent going forward.
  *

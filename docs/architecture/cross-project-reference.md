@@ -17,7 +17,7 @@ So the multi-select is an affordance that lies: it implies "act across these pro
 Selecting multiple projects can mean two completely different things, and the current UI can't tell them apart:
 
 1. **Target** — *where the work lands.* "Dispatch this task to kivvi." Inherently **singular** per dispatch (an agent runs in one project's session).
-2. **Reference** — *what informs the work.* "Do kivvi's auth the way aoz-housing does it." Inherently **plural** — pull other projects in as context.
+2. **Reference** — *what informs the work.* "Do kivvi's auth the way aoz-begleitung does it." Inherently **plural** — pull other projects in as context.
 
 `selectedProjects[0]` accidentally implements Target and throws away Reference. The fix is not "use all N as targets" — it's to **split the two intents into two distinct mechanics**:
 
@@ -27,7 +27,7 @@ Selecting multiple projects can mean two completely different things, and the cu
 
 ### A. Reference-as-context — *lead with this*
 
-In the composer, `@`-mention other projects: `@aoz-housing`. Each mention pulls that project's **profile** (mission, stack, architecture, conventions, definition-of-done — the block we already inject for the target) into the prompt as a clearly-delimited *"Referenced projects"* section, ahead of the task. Optionally pin specific files (`@aoz-housing/src/auth/*`) later.
+In the composer, `@`-mention other projects: `@aoz-begleitung`. Each mention pulls that project's **profile** (mission, stack, architecture, conventions, definition-of-done — the block we already inject for the target) into the prompt as a clearly-delimited *"Referenced projects"* section, ahead of the task. Optionally pin specific files (`@aoz-begleitung/src/auth/*`) later.
 
 Why `@`-mentions over a checkbox rail:
 - **Disambiguated by construction.** The target stays the selected/named project; references are explicit, inline, visible in the text you wrote. No silent dropping.
@@ -69,7 +69,7 @@ injectPrompt / askLoki (reference block already folded into the prompt)
 
 ## Why this is the right stepping stone
 
-The harness essay named **memory as our weakest strut**: a fleet should remember *more* than any one agent. Manual `@`-reference is the v1 of that — the operator hand-picks relevant cross-project context. The v2 is the harness *suggesting* references ("kivvi's auth resembles aoz-housing's — include it?") from similarity over the project profiles. Build the manual rail-to-mention path now; it's the substrate the automatic version grows on.
+The harness essay named **memory as our weakest strut**: a fleet should remember *more* than any one agent. Manual `@`-reference is the v1 of that — the operator hand-picks relevant cross-project context. The v2 is the harness *suggesting* references ("kivvi's auth resembles aoz-begleitung's — include it?") from similarity over the project profiles. Build the manual rail-to-mention path now; it's the substrate the automatic version grows on.
 
 ## Phasing
 

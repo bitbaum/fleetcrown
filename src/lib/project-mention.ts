@@ -24,7 +24,7 @@
  *   "OrangeCat"   → orangecat                 ✓
  *   "going"       → going ≠ go                ✗ no false positive
  *
- * Longest project name wins, so `aoz-housing` beats `aoz` on a sentence that
+ * Longest project name wins, so `aoz-begleitung` beats `aoz` on a sentence that
  * contains both.
  */
 
@@ -33,7 +33,7 @@ function tokenize(value: string): string[] {
   return value.toLowerCase().match(/[a-z0-9]+/g) ?? [];
 }
 
-/** A project's comparable form: every separator removed. `aoz-housing` → `aozhousing`. */
+/** A project's comparable form: every separator removed. `aoz-begleitung` → `aozhousing`. */
 function squash(value: string): string {
   return tokenize(value).join("");
 }
@@ -58,7 +58,7 @@ export function textMentionsProject(text: string, projectName: string): boolean 
 /**
  * The registered project this text names, or null.
  *
- * Longest name first so a sentence mentioning both `aoz` and `aoz-housing`
+ * Longest name first so a sentence mentioning both `aoz` and `aoz-begleitung`
  * resolves to the more specific one rather than whichever the caller listed
  * first — list order is a registry accident, not operator intent.
  */

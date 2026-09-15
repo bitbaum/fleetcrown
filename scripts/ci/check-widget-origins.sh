@@ -14,7 +14,7 @@
 #
 # Found 2026-09-11 on two live sites, both renamed months earlier:
 #
-#   aoz-housing      bound to https://aoz-wohnen.orangecat.ch   served at aoz.orangecat.ch
+#   aoz-begleitung      bound to https://aoz-wohnen.orangecat.ch   served at aoz.orangecat.ch
 #   sbb-lost-found   bound to https://sbb.orangecat.ch          served at sbbfundbuero.orangecat.ch
 #
 # Both had a working widget at provisioning. Both silently lost it at the

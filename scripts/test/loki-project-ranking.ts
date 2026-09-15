@@ -30,7 +30,7 @@ function check(name: string, actual: unknown, expected: unknown) {
 
 const names = (rows: Array<{ name: string }>) => rows.map((r) => r.name);
 const projects = [
-  "aoz-housing",
+  "aoz-begleitung",
   "BiasLens",
   "botsmann",
   "datacat",
@@ -59,13 +59,13 @@ check(
 check(
   "a slug is found when typed with a space",
   names(rankProjectsByMessage(projects, "how is aoz housing doing")).slice(0, 1),
-  ["aoz-housing"],
+  ["aoz-begleitung"],
 );
 
 check(
-  "a slug part is enough — 'aoz' finds aoz-housing",
+  "a slug part is enough — 'aoz' finds aoz-begleitung",
   names(rankProjectsByMessage(projects, "anything new on aoz?")).slice(0, 1),
-  ["aoz-housing"],
+  ["aoz-begleitung"],
 );
 
 check(

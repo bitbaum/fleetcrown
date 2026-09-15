@@ -43,7 +43,7 @@ const FLEET = [
   "Zeitkastli",
   "Prime tower",
   "lifeops",
-  "aoz-housing",
+  "aoz-begleitung",
   "botsmann",
   "datacat",
   "loki",
@@ -60,8 +60,8 @@ eq(projectMentionedIn("push orangecat please", FLEET), "orangecat", "exact slug 
 eq(projectMentionedIn("check OrangeCat's build", FLEET), "orangecat", "camel case");
 eq(projectMentionedIn("look at orange-cat", FLEET), "orangecat", "hyphenated");
 eq(
-  projectMentionedIn("the AOZ housing rebuild", FLEET),
-  "aoz-housing",
+  projectMentionedIn("the AOZ Begleitung rebuild", FLEET),
+  "aoz-begleitung",
   "slug with a hyphen, typed with a space",
 );
 eq(
@@ -78,8 +78,8 @@ check(
 );
 check("partial token runs do not match", !textMentionsProject("orange", "orangecat"));
 eq(
-  projectMentionedIn("compare aoz to the aoz-housing plan", ["aoz", "aoz-housing"]),
-  "aoz-housing",
+  projectMentionedIn("compare aoz to the aoz-begleitung plan", ["aoz", "aoz-begleitung"]),
+  "aoz-begleitung",
   "the longer, more specific name wins",
 );
 

@@ -122,7 +122,7 @@ via `.husky/pre-push` + `scripts/selfhost-deploy-revampit.sh` (also in
 
 - Drizzle apps swapped `@neondatabase/serverless`/neon-http → `pg` +
   `drizzle-orm/node-postgres` (+ `serverExternalPackages: ["pg"]`).
-- aoz-housing: Prisma Neon adapter removed (plain PrismaClient).
+- aoz-begleitung: Prisma Neon adapter removed (plain PrismaClient).
 - kivvi already had a postgres-js fallback; `DB_SSL=disable` env opts out of
   its hardcoded prod-SSL.
 - surf-your-life: `lib/domain/auth.ts` split (db-using verifyEmailToken →

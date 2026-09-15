@@ -18,7 +18,7 @@ import { db } from "../src/db";
 import { userProjects } from "../src/db/schema";
 
 const SITES: Record<string, string> = {
-  "aoz-housing": "https://aoz-wohnen.orangecat.ch",
+  "aoz-begleitung": "https://aoz-wohnen.orangecat.ch",
   botsmann: "https://botsmann.orangecat.ch",
   datacat: "https://datacat.orangecat.ch",
   loki: "https://loki.orangecat.ch",

@@ -84,7 +84,7 @@ export const userProjects = pgTable(
     // Canonical identity. The fleet register (src/lib/register) joins the four
     // surfaces — this table, apps.conf, OrangeCat, Solon — and "which project is
     // this" was answered by NAME, which has drifted into several spellings
-    // (aoz-housing/aoz-wohnen, datacat/datacat-web, s-ink/sink…). `slug` is the
+    // (aoz-begleitung/aoz-wohnen, datacat/datacat-web, s-ink/sink…). `slug` is the
     // repository name and the one key every other register must use.
     slug: text("slug"),
     // The apps.conf row this project is served by (its `name` column), when it

@@ -43,7 +43,7 @@ const MIN_NAME_CHARS = 3;
  * callers still slice, and this only decides who survives the slice.
  *
  * Matching is whole-word against the normalised message, and also against each
- * PART of a multi-word name, because operators type slugs loosely: `aoz-housing`
+ * PART of a multi-word name, because operators type slugs loosely: `aoz-begleitung`
  * is asked about as "aoz housing" and as "aoz".
  */
 export function rankProjectsByMessage<T extends { name: string }>(

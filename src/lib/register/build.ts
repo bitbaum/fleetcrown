@@ -8,7 +8,7 @@
 // the join, computed from the owners of each fact, not a copy of them.
 //
 // The join key is the CANONICAL SLUG — the repository name. Projects have
-// drifted into several names (aoz-housing/aoz-wohnen, datacat/datacat-web,
+// drifted into several names (aoz-begleitung/aoz-wohnen, datacat/datacat-web,
 // s-ink/sink, sbb-fundbuero/sbb-lost-found, wild-spirit/annushka). A join on
 // raw names silently drops those; `canonicalSlug` folds them. The durable fix
 // is the `slug` column on user_projects, which this honours first.
@@ -18,7 +18,7 @@ import { hostedUrl } from "./apps-conf";
 
 /** Older name → canonical repository name. Add here when a rename happens. */
 export const SLUG_ALIASES: Readonly<Record<string, string>> = {
-  "aoz-wohnen": "aoz-housing",
+  "aoz-wohnen": "aoz-begleitung",
   "datacat-web": "datacat",
   sink: "s-ink",
   "sbb-lost-found": "sbb-fundbuero",

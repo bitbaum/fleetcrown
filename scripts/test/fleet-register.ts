@@ -29,7 +29,7 @@ function ok(cond: boolean, label: string) {
 const CONF = `
 # name|port|domains|repo_path|app_dir|db|owner|kind|status|plan|price|since
 kivvi|4005|kivvi.orangecat.ch|/home/g/dev/kivvi|.|kivvi|RevampIT|client-app|live|retainer|900|2026-03-01
-aoz-wohnen|4008|aoz.orangecat.ch|/home/g/dev/aoz-housing|.|-|AOZ|client-app|live|-|-|-
+aoz-wohnen|4008|aoz.orangecat.ch|/home/g/dev/aoz-begleitung|.|-|AOZ|client-app|live|-|-|-
 sink|4019|sinktattoo.com,www.sinktattoo.com|/home/g/dev/s-ink|.|-|S-Ink|client-site|live|-|-|-
 factory-sep11-0110|4031|factory-sep11-0110.orangecat.ch|/home/ubuntu/dev/factory-sep11-0110|.|-|bitbaum|demo|demo|-|-|2026-09-11
 short|4099|short.orangecat.ch
@@ -41,7 +41,7 @@ ok(apps[0].port === 4005 && apps[0].plan === "retainer", "keeps port and terms")
 ok(apps[4].kind === "-" && apps[4].appDir === ".", "short rows get '-' defaults");
 
 // --------------------------------------------------------------- aliases
-ok(canonicalSlug("aoz-wohnen") === "aoz-housing", "aoz-wohnen → aoz-housing");
+ok(canonicalSlug("aoz-wohnen") === "aoz-begleitung", "aoz-wohnen → aoz-begleitung");
 ok(canonicalSlug("datacat-web") === "datacat", "datacat-web → datacat");
 ok(canonicalSlug("sink") === "s-ink", "sink → s-ink");
 ok(canonicalSlug("sbb-lost-found") === "sbb-fundbuero", "sbb-lost-found → sbb-fundbuero");
@@ -63,10 +63,10 @@ const rows = buildFleetRegister(
     },
     {
       id: "2",
-      name: "aoz-housing",
+      name: "aoz-begleitung",
       // What the site factory writes into every project it provisions.
       description: "Website at https://aoz.orangecat.ch",
-      gitUrl: "https://github.com/bitbaum/aoz-housing.git",
+      gitUrl: "https://github.com/bitbaum/aoz-begleitung.git",
     },
     { id: "3", name: "Annushka Wild Spirit Art", gitUrl: null },
     {
@@ -85,10 +85,10 @@ const by = Object.fromEntries(rows.map((r) => [r.slug, r]));
 
 ok(!("retired" in by), "inactive projects are excluded");
 ok(
-  by["aoz-housing"]?.site?.host === "aoz.orangecat.ch",
-  "aoz-wohnen row attaches to aoz-housing via alias",
+  by["aoz-begleitung"]?.site?.host === "aoz.orangecat.ch",
+  "aoz-wohnen row attaches to aoz-begleitung via alias",
 );
-ok(by["aoz-housing"]?.loki?.id === "2", "…and keeps its Loki profile");
+ok(by["aoz-begleitung"]?.loki?.id === "2", "…and keeps its Loki profile");
 ok(by["s-ink"]?.site?.host === "sinktattoo.com", "sink row attaches to the stored slug s-ink");
 ok(by["s-ink"]?.loki?.id === "6", "stored slug wins over the display name");
 ok(by["orangecat"]?.orangecat?.projectId === "cb09", "OrangeCat link carried");
@@ -113,7 +113,7 @@ ok(
 // comes from the project profile — and the factory's own filler does not count
 // as one, or every provisioned site would "describe" itself with its address.
 ok(by["kivvi"]?.description === "ERP for RevampIT", "description carried from the profile");
-ok(by["aoz-housing"]?.description === null, "factory boilerplate is treated as no description");
+ok(by["aoz-begleitung"]?.description === null, "factory boilerplate is treated as no description");
 ok(by["short"]?.description === null, "a hosted-only row has no description to carry");
 ok(usefulDescription("  ") === null && usefulDescription(null) === null, "blank is absent");
 ok(

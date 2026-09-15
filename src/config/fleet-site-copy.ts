@@ -13,7 +13,7 @@
  */
 export const FLEET_SITE_COPY: Readonly<Record<string, { name: string; blurb: string }>> = {
   orangecat: { name: "OrangeCat", blurb: "Fund, lend, invest, and coordinate with any identity." },
-  "aoz-housing": {
+  "aoz-begleitung": {
     name: "AOZ Begleitung",
     blurb: "Gemeinsam wohnen — kompatibilitätsbasierte Wohnplatzierung.",
   },

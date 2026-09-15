@@ -31,7 +31,7 @@ Do **not** build codebase RAG. Claude Code, Hermes, Cursor — every runtime alr
 
 The captain sees something **no runtime does: the whole fleet + the operator's life.** That's where retrieval is uniquely ours:
 
-1. **Cross-project knowledge** — "do auth in kivvi like aoz-housing does it." Only the captain sees both repos' profiles/decisions. This is the engine under the [cross-project-reference](./cross-project-reference.md) spec's *suggested references*.
+1. **Cross-project knowledge** — "do auth in kivvi like aoz-begleitung does it." Only the captain sees both repos' profiles/decisions. This is the engine under the [cross-project-reference](./cross-project-reference.md) spec's *suggested references*.
 2. **Fleet memory** — handoffs, orchestration outcomes, decisions, dev-log entries across all projects. "What did we learn last time we touched deploys?" No single agent's memory holds this.
 3. **Life-OS recall** — 1,286 contacts, commitments, captures, interactions. Powers Loki answering "what did I promise Manuel?" over the knowledge graph.
 
