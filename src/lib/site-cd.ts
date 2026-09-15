@@ -13,6 +13,13 @@
  */
 import { repoSlug } from "@/lib/github-provision";
 
+// The reserved list and the slug grammar are shared with the hosted runner
+// provisioning door; re-exported here so this module stays the one import for
+// everything live-site CD needs.
+import { RESERVED_SITE_SLUGS, SLUG_RE, isValidSiteSlug } from "@/lib/site-slug";
+
+export { RESERVED_SITE_SLUGS, isValidSiteSlug };
+
 /** Matches scripts/hetzner/_box-env.sh SITES_BASE_DOMAIN. */
 export function sitesBaseDomain(): string {
   return (process.env.LOKI_SITES_BASE_DOMAIN ?? "orangecat.ch").trim() || "orangecat.ch";
@@ -23,59 +30,9 @@ export function workflowOwner(): string {
   return (process.env.LOKI_WORKFLOW_OWNER ?? "bitbaum").trim() || "bitbaum";
 }
 
-/**
- * Reserved DNS / infra labels — mirrored from new-site.sh. A kickoff that
- * claimed loki.orangecat.ch would be a hostile rename of the control plane.
- */
-export const RESERVED_SITE_SLUGS = new Set([
-  "www",
-  "api",
-  "app",
-  "admin",
-  "support",
-  "security",
-  "billing",
-  "pay",
-  "wallet",
-  "login",
-  "auth",
-  "account",
-  "mail",
-  "smtp",
-  "imap",
-  "ns1",
-  "ns2",
-  "mx",
-  "cdn",
-  "static",
-  "assets",
-  "vpn",
-  "db",
-  "status",
-  "staging",
-  "dev",
-  "test",
-  "preview",
-  "bridge",
-  "loki",
-  "orangecat",
-  "supabase",
-  "solon",
-  "evig",
-  "revampit",
-  "root",
-  "system",
-]);
-
-const SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
-
 /** DNS-safe slug for orangecat.ch — same rules as new-site.sh / repoSlug. */
 export function siteCdSlug(name: string): string {
   return repoSlug(name);
-}
-
-export function isValidSiteSlug(slug: string): boolean {
-  return SLUG_RE.test(slug) && !RESERVED_SITE_SLUGS.has(slug);
 }
 
 export function siteCdLiveUrl(slug: string): string {

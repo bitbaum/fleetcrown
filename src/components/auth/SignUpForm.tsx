@@ -6,8 +6,7 @@ import { signIn } from "next-auth/react";
 import {
   AuthShell,
   AuthCard,
-  AuthField,
-  AuthInput,
+  CreateAccountFields,
   AuthSubmitButton,
   AuthFooterLink,
   AuthHeading,
@@ -74,49 +73,17 @@ export function SignUpForm({ oauthFlags }: { oauthFlags: OAuthEnabledFlags }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <AuthField label="Your name">
-            <AuthInput
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Manu"
-              autoComplete="name"
-              required
-            />
-          </AuthField>
-
-          <AuthField label="Email">
-            <AuthInput
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoComplete="email"
-              required
-            />
-          </AuthField>
-
-          <AuthField label="Password">
-            <AuthInput
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              required
-            />
-          </AuthField>
-
-          <AuthField label="Confirm password">
-            <AuthInput
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Repeat password"
-              autoComplete="new-password"
-              required
-            />
-          </AuthField>
+          <CreateAccountFields
+            name={name}
+            onName={setName}
+            namePlaceholder="e.g. Manu"
+            email={email}
+            onEmail={setEmail}
+            password={password}
+            onPassword={setPassword}
+            confirm={confirm}
+            onConfirm={setConfirm}
+          />
 
           {error && <p className="ui-error">{error}</p>}
 
