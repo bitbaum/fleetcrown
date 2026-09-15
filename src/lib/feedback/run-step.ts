@@ -95,7 +95,8 @@ export function summarizeRunStep(input: {
     return {
       kind: "waiting_builder",
       summary: "Waiting for cloud builder to claim",
-      detail: "Command is in the queue. If this stays put, Watch shows why — Telegram when it stalls.",
+      detail:
+        "Command is in the queue. If this stays put, Watch shows why — Telegram when it stalls.",
     };
   }
   return {

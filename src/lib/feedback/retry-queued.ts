@@ -124,7 +124,7 @@ export async function autoRetryStuckFeedbackQueues(): Promise<{
         await setFeedbackStatus(userId, item.id, FEEDBACK_STATUS.DISPATCHED, body.runId);
         // Carry the retry stamp onto the NEW run so a second cron tick does not
         // fire again before the starting window elapses.
-      await stampFeedbackAutoRetried(run.id, userId).catch(() => null);
+        await stampFeedbackAutoRetried(run.id, userId).catch(() => null);
         retried++;
       } else {
         skipped++;
