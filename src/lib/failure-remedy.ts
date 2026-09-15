@@ -24,6 +24,28 @@ export const FAILURE_REMEDY = {
 } as const;
 export type FailureRemedy = (typeof FAILURE_REMEDY)[keyof typeof FAILURE_REMEDY];
 
+/**
+ * What the button for each remedy actually SAYS.
+ *
+ * Here rather than in the component because prose elsewhere has to name the
+ * same control, and naming it by hand is how the two drifted: /control stopped
+ * rendering Retry for "no running agent" (it was a lie — the target is
+ * identically absent on every attempt), but two sentences kept telling the
+ * reader to look for Retry in exactly that case. The behaviour was fixed; the
+ * copy describing it was not, so the reader hunted for a button that is
+ * deliberately absent.
+ */
+export const REMEDY_LABEL: Record<FailureRemedy, string> = {
+  [FAILURE_REMEDY.START_SESSION]: "Start session",
+  [FAILURE_REMEDY.RETRY]: "Retry",
+};
+
+/** The label Attention will show for a failure with this error text. Use this
+ *  when writing copy that points the reader at that button. */
+export function remedyLabelFor(error: string | null | undefined): string {
+  return REMEDY_LABEL[remedyForFailure(error)];
+}
+
 export function remedyForFailure(error: string | null | undefined): FailureRemedy {
   const text = (error ?? "").toLowerCase();
   if (text.includes(FAILURE_PHRASE.NO_RUNNING_AGENT)) return FAILURE_REMEDY.START_SESSION;
