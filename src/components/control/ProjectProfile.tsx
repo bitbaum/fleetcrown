@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { DEFAULT_BUILDER_CHANNEL, type BuilderChannel } from "@/lib/constants/statuses";
+import {
+  DEFAULT_BUILDER_CHANNEL,
+  HOSTED_BUILDER_PREF,
+  type BuilderPref,
+} from "@/lib/constants/statuses";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import Link from "next/link";
 import { ExternalLink, GitBranch, Loader2, MapPin } from "lucide-react";
@@ -18,9 +22,14 @@ import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./Session
 type AgentEntry = { id: string; label: string; modelSuggestions: string[] };
 type AgentId = string;
 
-const BUILDER_CHOICES: { id: BuilderChannel; label: string }[] = [
+const BUILDER_CHOICES: { id: BuilderPref; label: string; detail?: string }[] = [
   { id: "cloud", label: EXECUTOR_COPY.builder.cloudChoice },
   { id: "local", label: EXECUTOR_COPY.builder.localChoice },
+  {
+    id: HOSTED_BUILDER_PREF,
+    label: EXECUTOR_COPY.builder.hostedChoice,
+    detail: EXECUTOR_COPY.builder.hostedDetail,
+  },
 ];
 
 function ProjectContextSummary({ project }: { project: ProjectState }) {
@@ -147,7 +156,7 @@ export function ProjectProfile({
   };
 
   const [localBuilder, setLocalBuilder] = useState<string | null>(project.builderPref ?? null);
-  const persistBuilderPref = (channel: BuilderChannel | null) => {
+  const persistBuilderPref = (channel: BuilderPref | null) => {
     setLocalBuilder(channel);
     if (project.id) {
       patchJson(`/api/user-projects/${project.id}`, { builderPref: channel ?? undefined }).catch(
@@ -236,6 +245,7 @@ export function ProjectProfile({
           {BUILDER_CHOICES.map((c) => (
             <button
               key={c.id}
+              title={c.detail}
               onClick={() => persistBuilderPref(c.id === DEFAULT_BUILDER_CHANNEL ? null : c.id)}
               className={cn(
                 "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",

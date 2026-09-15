@@ -172,6 +172,23 @@ export type BuilderChannel = (typeof BUILDER_CHANNELS)[number];
  * string would otherwise index the copy map to `undefined` and silently drop
  * the builder's name from the label.
  */
+/**
+ * The third stored preference: the HOSTED runner. Not a channel — nothing
+ * claims it from a PTY queue — but a routing decision a project can pin:
+ * every dispatch goes straight to the hosted runner (Hermes in its own clone,
+ * on whichever providers the box holds keys for). It is the unattended path
+ * that needs no Claude credential at all, which is why it exists: on
+ * 2026-09-14 the box's Claude Code token died with the account that minted
+ * it and every self-dispatch hung, while Hermes on the same box answered fine.
+ */
+export const HOSTED_BUILDER_PREF = "hosted" as const;
+/** `user_projects.builder_pref` accepts a channel or the hosted runner. */
+export const BUILDER_PREFS = [...BUILDER_CHANNELS, HOSTED_BUILDER_PREF] as const;
+export type BuilderPref = (typeof BUILDER_PREFS)[number];
+export function isHostedBuilderPref(value: unknown): value is typeof HOSTED_BUILDER_PREF {
+  return value === HOSTED_BUILDER_PREF;
+}
+
 export function isBuilderChannel(value: unknown): value is BuilderChannel {
   return typeof value === "string" && (BUILDER_CHANNELS as readonly string[]).includes(value);
 }

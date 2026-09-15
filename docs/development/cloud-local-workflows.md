@@ -70,6 +70,7 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | **Web app** | Hosted Hetzner box (`loki-app`) or local dev | Auth, Postgres, Control/Loki UI, command queue — **control plane only on prod** (`RUNTIME_AVAILABLE` unset) |
 | **box-runner** | Hetzner box (`loki-box-runner.service`) | Eligible-account cloud builder: polls queue, owned PTY agents, peek-stream for Terminal → Cloud |
 | **Fleet Runner** | Optional — operator's computer (Electron) | Same queue on local machine; Terminal → This computer |
+| **Hosted runner (Hermes)** | Optional — per project, `builder_pref = hosted` (Control → profile → Runs on) | No PTY: the task goes straight to Hermes in its own clone on the box, on the providers the box has keys for (Copilot, Gemini, Groq); every task ends in a pull request and the tracked run closes with it, so the outcome reaches the thread that asked. Needs no Claude credential — the unattended path when the box builder has none. |
 | **Hermes runner** | Hetzner sandbox | PR-mode offline dispatches when no builder claims |
 | **`home/` library** | Embedded in desktop runner | Local JSONL event loop; see `home/README.md` |
 

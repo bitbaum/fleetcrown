@@ -14,6 +14,10 @@ export const EXECUTOR_COPY = {
     /** The two tiers a project can be pinned to (Control → project profile → "Runs on"). */
     cloudChoice: "Cloud builder",
     localChoice: "This computer",
+    /** The third tier: no PTY, no Claude credential — Hermes in its own clone on the box. */
+    hostedChoice: "Hosted runner (Hermes)",
+    hostedDetail:
+      "Runs in its own clone on the box with the providers the box already has keys for; every task ends in a pull request. Needs no Claude sign-in.",
     cloudOnline: "Cloud builder online",
     localComputerOnline: "This computer online",
     bothOnline: "Cloud + this computer online",

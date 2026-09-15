@@ -220,6 +220,12 @@ export type HostedDispatchPayload = {
   gitUrl: string;
   task: string;
   model?: string;
+  /** The tracked run this command executes, when the project is pinned to the
+   *  hosted builder. The hosted runner closes it — with the PR as evidence —
+   *  so the outcome reaches the thread that asked. Absent on the offline
+   *  fallback, where the runner's own run is still expected to close. */
+  runId?: string;
+  projectId?: string;
 };
 export async function enqueueHostedDispatchCommand(
   userId: string,
