@@ -7,6 +7,7 @@ import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
 import { resolveOutgoingAgentForDir } from "@/lib/agent-process-scan";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
+import { sleep } from "@/lib/async";
 
 const SwitchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -15,10 +16,6 @@ const SwitchAgentBody = z.object({
   fromAgent: z.string().trim().optional(),
   model: z.string().trim().optional(),
 });
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, SwitchAgentBody);

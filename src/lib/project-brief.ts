@@ -9,6 +9,7 @@ import { syncUserProjectDescription } from "@/db/queries/user-projects";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { PROJECT_ATTR } from "@/config/project-attrs";
 import { hasAnswer } from "@/lib/project-display";
+import { parseModelJson } from "@/lib/ai/model-json";
 
 /**
  * AI-powered project profile extraction — the "no forms" path.
@@ -89,18 +90,6 @@ ${GTM_KEY_SPEC}
 - "expansion_ideas": plausible product expansions or adjacent offerings (max 400 chars)
 For the market-lens keys (problem … expansion_ideas) you may reason from the text plus common knowledge of the market, but stay concrete and grounded — no hype. For all other keys, NEVER invent facts that are not in the text.
 Omit any key you have no basis for. Write in the same language as the source text uses for prose (default English).`;
-
-/** Strip optional markdown fences and parse the model's JSON answer. */
-function parseModelJson(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/```\s*$/, "")
-    .trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) throw new Error("model returned no JSON object");
-  return JSON.parse(cleaned.slice(start, end + 1));
-}
 
 /** Clamp every string field to its schema max instead of rejecting — the
  *  model occasionally runs a few chars over and a hard fail wastes the call.

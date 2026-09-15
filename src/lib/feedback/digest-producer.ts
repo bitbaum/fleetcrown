@@ -8,6 +8,7 @@ import {
 } from "@/db/queries/site-feedback";
 import { proposeAction } from "@/db/queries/actions";
 import { callGroqText } from "@/lib/groq";
+import { parseModelJson } from "@/lib/ai/model-json";
 import {
   ACTION_STATUS,
   ACTION_TYPE,
@@ -39,12 +40,6 @@ const PROPOSAL_TTL_DAYS = 7;
 
 type GroqTheme = { title: string; itemIndexes: number[]; proposedChange: string; where: string };
 
-function extractJson(raw: string): string {
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  return start >= 0 && end > start ? raw.slice(start, end + 1) : raw;
-}
-
 async function clusterItems(items: FeedbackListItem[], projectName: string): Promise<GroqTheme[]> {
   // Untrusted visitor text: inline-sanitized (no newlines, no fence sentinels)
   // and — deliberately — placed AFTER the instructions, so a submission shaped
@@ -67,7 +62,7 @@ async function clusterItems(items: FeedbackListItem[], projectName: string): Pro
     maxTokens: 500,
     temperature: 0.2,
   });
-  const parsed = JSON.parse(extractJson(raw)) as { themes?: GroqTheme[] };
+  const parsed = parseModelJson<{ themes?: GroqTheme[] }>(raw);
   return (parsed.themes ?? [])
     .filter(
       (t) =>

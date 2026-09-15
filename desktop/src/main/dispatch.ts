@@ -47,6 +47,7 @@
 import { loadToken } from './token-store'
 import type { Handoff } from '@/lib/events'
 import { APP_URL } from '@/config/brand'
+import { sleep } from "@/lib/async"
 
 const BASE_URL = (process.env.LOKI_WEB_URL || '').trim() || APP_URL
 const COOLDOWN_MS = Number(process.env.LOKI_AUTOPILOT_COOLDOWN_S || 300) * 1000
@@ -180,10 +181,6 @@ async function fetchQueue(project: string, token: string): Promise<string[]> {
   if (!resp.ok) return []
   const body = await resp.json() as { queue?: string[] }
   return Array.isArray(body.queue) ? body.queue : []
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /** Reset the cooldown for a project — exposed for tests and for the future
