@@ -42,6 +42,11 @@ export const FLEET_SITES: readonly FleetSite[] = [
     blurb: "Refurbished IT kaufen und Reparaturwerkstätten finden.",
   },
   {
+    name: "Heidi",
+    url: "https://heidi.orangecat.ch",
+    blurb: "Züritüütsch verstehen, dann wie ein Local texten. Im Aufbau.",
+  },
+  {
     name: "kivvi",
     url: "https://kivvi.orangecat.ch",
     blurb: "Open-Source-ERP für Kreislaufbetriebe.",
