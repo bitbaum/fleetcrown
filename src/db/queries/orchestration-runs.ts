@@ -14,6 +14,7 @@ import { promoteRunClose } from "@/lib/integrations/orangecat-publish";
 import { advanceEscalation, resolveEscalation } from "./run-escalations";
 import { ladderEffectForClose } from "@/lib/orchestration/escalation-ladder";
 import { notifyRunClosed } from "@/lib/orchestration/notify-close";
+import { deliveryStampFor } from "@/lib/orchestration/close-from-session";
 import { correctTimeoutReapsWithRepoEvidence } from "@/lib/orchestration/reap-evidence";
 import { emitRunEvent } from "./run-events";
 import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
@@ -103,11 +104,21 @@ export async function updateOrchestrationRun(
  * handoff-freshness floor, so a stale ready re-push from before delivery can
  * never close this run.
  */
-export async function stampRunDelivered(runId: string, userId: string): Promise<void> {
+export async function stampRunDelivered(
+  runId: string,
+  userId: string,
+  /** The runner's own injection time, when it reports one (see deliveryStampFor). */
+  reportedDeliveredAt?: unknown,
+): Promise<void> {
+  let stamp = new Date().toISOString();
+  if (typeof reportedDeliveredAt === "string") {
+    const run = await getOrchestrationRunById(userId, runId).catch(() => null);
+    stamp = deliveryStampFor(reportedDeliveredAt, run?.startedAt ?? null);
+  }
   await db
     .update(orchestrationRuns)
     .set({
-      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{deliveredAt}', ${JSON.stringify(new Date().toISOString())}::jsonb)`,
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{deliveredAt}', ${JSON.stringify(stamp)}::jsonb)`,
     })
     .where(
       and(
