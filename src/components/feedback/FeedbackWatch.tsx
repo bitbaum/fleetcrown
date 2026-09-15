@@ -77,9 +77,15 @@ export function FeedbackWatchPanel({
   }, [feedbackId]);
 
   useEffect(() => {
-    void load();
+    // Poll while the panel is mounted — same honesty interval as the inbox.
+    // Defer the first load so we are not setState-sync inside the effect body
+    // (react-hooks/set-state-in-effect).
+    const first = window.setTimeout(() => void load(), 0);
     const t = window.setInterval(() => void load(), 8_000);
-    return () => window.clearInterval(t);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(t);
+    };
   }, [load]);
 
   const summary = data?.work.stepSummary ?? stepSummary ?? "Checking progress…";
