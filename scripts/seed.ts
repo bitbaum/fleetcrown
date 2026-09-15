@@ -56,7 +56,7 @@ async function main() {
     id: OWNER_USER_ID,
     name: "Cato", // pseudonym — never seed the operator's real name (it surfaces on the public /u/ profile)
     // Real login email comes from SEED_OWNER_EMAIL so it is never committed.
-    email: process.env.SEED_OWNER_EMAIL ?? "mao@orangecat.ch",
+    email: process.env.SEED_OWNER_EMAIL ?? "cato@orangecat.ch",
     isDefault: true,
   });
 
