@@ -195,7 +195,6 @@ function withStep(
   };
 }
 
-
 /**
  * Who acts next. Derived in ONE place from the phase and the fix ledger, so
  * a new phase cannot quietly land in the wrong column — every surface that
@@ -325,10 +324,9 @@ function derivePhase(
       label: "Builder offline",
       detail: "Connect cloud builder or Retry — Telegram when it stays offline",
       // watchable filled by withStep (in-flight); no PTY yet → terminalReady false
-      diagnostic:
-        run.hostedPending
-          ? "Cloud builder offline; hosted Hermes was queued but has not claimed yet."
-          : "Cloud builder offline — no agent session will appear until loki-box-runner is online (or Hermes accepts).",
+      diagnostic: run.hostedPending
+        ? "Cloud builder offline; hosted Hermes was queued but has not claimed yet."
+        : "Cloud builder offline — no agent session will appear until loki-box-runner is online (or Hermes accepts).",
     };
   }
   if (!run.deliveredAt && ageMs > STARTING_MS) {

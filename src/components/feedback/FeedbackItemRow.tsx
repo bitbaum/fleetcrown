@@ -158,9 +158,7 @@ export function FeedbackItemRow({
           {(work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
             work.phase === FEEDBACK_WORK_PHASE.WORKING) && (
             <p className="mt-1 text-xs text-text-muted">
-              {work.stepSummary
-                ? work.stepSummary
-                : "Moving — Telegram when you need to"}
+              {work.stepSummary ? work.stepSummary : "Moving — Telegram when you need to"}
             </p>
           )}
           {work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && work.didLine && (

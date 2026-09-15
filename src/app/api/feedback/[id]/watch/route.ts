@@ -42,9 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   let commandLive: ReturnType<typeof deriveDispatchLiveStatus> | null = null;
   const commandId =
-    work.commandId ??
-    (run?.payload as { commandId?: string } | null)?.commandId ??
-    null;
+    work.commandId ?? (run?.payload as { commandId?: string } | null)?.commandId ?? null;
   if (commandId) {
     const cmd = await getCommandById(commandId);
     if (cmd && cmd.userId === userId) {

@@ -25,13 +25,7 @@ type WatchPayload = {
  * `variant="button"` is the rail control; when open, render `<FeedbackWatchPanel/>`
  * under the row (full width).
  */
-export function FeedbackWatchButton({
-  open,
-  onToggle,
-}: {
-  open: boolean;
-  onToggle: () => void;
-}) {
+export function FeedbackWatchButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"
@@ -104,17 +98,13 @@ export function FeedbackWatchPanel({
           )}
           {!ready && (
             <p className="mt-1 text-text-muted">
-              Terminal opens once a session exists — cold-start creates it when the
-              cloud builder is online.
+              Terminal opens once a session exists — cold-start creates it when the cloud builder is
+              online.
             </p>
           )}
         </div>
         {ready ? (
-          <a
-            href={termHref}
-            className="ui-btn-secondary gap-1 shrink-0"
-            title="Open the agent PTY"
-          >
+          <a href={termHref} className="ui-btn-secondary gap-1 shrink-0" title="Open the agent PTY">
             <SquareTerminal className="h-3 w-3" /> Terminal
           </a>
         ) : (

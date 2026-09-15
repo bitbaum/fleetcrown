@@ -55,9 +55,7 @@ export async function emitRunEvent(
  * Latest hop per run — for feedback Watch step summaries. Ascending fetch then
  * last-write-wins so a small IN list stays one query.
  */
-export async function getLatestRunEventKinds(
-  runIds: string[],
-): Promise<Map<string, RunEventKind>> {
+export async function getLatestRunEventKinds(runIds: string[]): Promise<Map<string, RunEventKind>> {
   if (runIds.length === 0) return new Map();
   const rows = await db
     .select({ runId: runEvents.runId, kind: runEvents.kind })
