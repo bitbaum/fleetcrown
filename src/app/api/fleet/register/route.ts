@@ -29,6 +29,12 @@ export async function GET() {
       id: p.id,
       name: p.name,
       slug: p.slug,
+      // Omitted until 2026-09-15, which made `description` null on all 35 rows
+      // of a public register whose only prose field it is. `buildFleetRegister`
+      // reads `description` off its input, load-map.ts passed it, this route
+      // did not — and `usefulDescription(undefined)` is null, so the gap
+      // presented exactly like a register nobody had written descriptions for.
+      description: p.description,
       hostedApp: p.hostedApp,
       gitUrl: p.gitUrl,
       liveUrl: p.liveUrl,
