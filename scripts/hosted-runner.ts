@@ -43,6 +43,7 @@ import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import type { AdapterId, OrchestrationEventType } from "@/lib/orchestration";
 import { analyzeRepo } from "@/lib/hosted-runner/analyze";
 import { runHermesTask } from "@/lib/hosted-runner/run-hermes";
+import { settleBackgroundWork } from "@/lib/orchestration/settle-background-work";
 import {
   getOrchestrationRunById,
   stampRunDelivered,
@@ -453,6 +454,10 @@ async function main() {
   // represents a continuously-available runner.
   if (once) {
     const n = await drain(userId);
+    // Let fire-and-forget work finish before the process dies — see
+    // settle-background-work.ts. Skipped when nothing was drained: an idle
+    // tick has no background work to wait for.
+    if (n > 0) await settleBackgroundWork();
     console.log(`[hosted-runner] drained ${n} (one-shot; presence unchanged)`);
     process.exit(0);
   }

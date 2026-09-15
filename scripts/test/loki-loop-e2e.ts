@@ -110,6 +110,23 @@ async function thread(conversationId: string): Promise<Turn[]> {
   return ((await res.json()) as { messages: Turn[] }).messages;
 }
 
+/** The run's own state — so a lost notification cannot read as a broken loop. */
+async function runState(runId: string): Promise<string> {
+  try {
+    const res = await fetch(`${BASE}/api/orchestration/runs/${runId}`, { headers });
+    if (!res.ok) return `unreadable (HTTP ${res.status})`;
+    const j = (await res.json()) as { run?: { state?: string; outcome?: string } } & {
+      state?: string;
+      outcome?: string;
+    };
+    const state = j.run?.state ?? j.state ?? "?";
+    const outcome = j.run?.outcome ?? j.outcome ?? "-";
+    return `${state}/${outcome}`;
+  } catch (e) {
+    return `unreadable (${(e as Error).message})`;
+  }
+}
+
 async function abortRun(runId: string, why: string): Promise<void> {
   await fetch(`${BASE}/api/orchestration/runs/${runId}/finish`, {
     method: "POST",
@@ -213,14 +230,22 @@ async function checkClosesTheLoop() {
     if (outcome) break;
   }
   if (!outcome) {
-    await abortRun(
-      runId,
-      `no outcome within ${DISPATCH_MINUTES} min — check builder auth (loki-builder-auth timer) and the box-runner`,
-    );
+    // Name WHICH half broke. A closed run with no turn is a lost notification
+    // (the work happened); an open run is a stuck builder.
+    const state = await runState(runId);
+    const closed = /^(done|error|closed)\//.test(state);
+    if (!closed) {
+      await abortRun(
+        runId,
+        `no outcome within ${DISPATCH_MINUTES} min — check builder auth (loki-builder-auth timer) and the box-runner`,
+      );
+    }
     record(
       "closes the loop: outcome came back into the thread",
       false,
-      `run ${runId}: no outcome turn within ${DISPATCH_MINUTES} min — aborted. First suspect: the box builder cannot authenticate (see /opt/monitoring/builder-auth-check.sh --report).`,
+      closed
+        ? `run ${runId} CLOSED (${state}) but wrote no outcome turn — the work happened, the notification was lost. Suspect a process that exits before its fire-and-forget close notification (see settle-background-work.ts).`
+        : `run ${runId} still ${state} after ${DISPATCH_MINUTES} min — aborted. First suspect: the box builder cannot authenticate (see /opt/monitoring/builder-auth-check.sh --report).`,
     );
     return;
   }
