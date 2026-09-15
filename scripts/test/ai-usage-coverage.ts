@@ -78,4 +78,19 @@ check("the ledger write can never fail an answer", () => {
   assert.match(groq, /\.catch\(\(\) => undefined\)/, "must swallow its own failure");
 });
 
+check("the unit runner strips DATABASE_URL, so a ledger write cannot hang it", () => {
+  // Production code now does fire-and-forget writes on a hot path. With a
+  // REACHABLE database in the child, the pool holds the event loop and the test
+  // process never exits — green on a laptop with no DATABASE_URL, stuck forever
+  // in CI, which is the worst possible split. Reproduced, then fixed here.
+  const runner = read("scripts/test-unit.ts");
+  assert.match(runner, /delete env\[key\]/, "the child env must have db handles removed");
+  assert.match(runner, /DATABASE_URL/, "…including DATABASE_URL by name");
+  assert.match(
+    runner,
+    /NEEDS_DATABASE/,
+    "and the tests that genuinely need one must be NAMED, not silently relying on inheritance",
+  );
+});
+
 console.log(`✓ ai usage coverage: ${passed} checks passed`);

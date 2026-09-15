@@ -81,10 +81,53 @@ console.log(`→ running ${files.length} unit tests (parallel ${MAX_PARALLEL})\n
 const runner = existsSync(TSX_BIN) ? TSX_BIN : "npx";
 const baseArgs = existsSync(TSX_BIN) ? [] : ["tsx"];
 
+/**
+ * The tests that genuinely need a database, and keep their connection string.
+ *
+ * Everything else in this directory is pure and gets it stripped. Naming the
+ * exceptions is the point: the runner used to claim the whole suite was
+ * env-independent, and this file's own header said so, while this test imported
+ * `@/db` at module load and passed only because CI happened to export
+ * DATABASE_URL. A claim with an exception nobody wrote down is how the next
+ * person trusts it.
+ */
+const NEEDS_DATABASE = new Set([
+  // Reads real entitlement rows; asserts against a live schema.
+  "orangecat-entitlement-e2e.ts",
+]);
+
+/**
+ * The child env, with every database handle REMOVED.
+ *
+ * This file has always said the suite is "environment-independent by
+ * construction: every test passes with NO DATABASE_URL". That was a claim, not
+ * a mechanism — the variable was simply inherited, and on a laptop it usually
+ * happens to be absent.
+ *
+ * It is present in CI. So a test that reaches production code doing a
+ * fire-and-forget ledger write opens a real pool, the pool holds the event
+ * loop, the child never exits, and `Verify` hangs until the job is killed —
+ * green on every laptop, stuck on every run. Observed exactly that: two CI runs
+ * frozen at Verify with `updatedAt` seconds after start, reproduced locally
+ * only once the database was BOTH configured and reachable.
+ *
+ * Stripping it makes the claim true by construction. A unit test cannot touch a
+ * database it cannot address, so no future write on a hot path can hang the
+ * suite. Tests that genuinely need infrastructure are already excluded above,
+ * with their reason.
+ */
+function childEnv(file: string): NodeJS.ProcessEnv {
+  if (NEEDS_DATABASE.has(file)) return process.env;
+  const env = { ...process.env };
+  for (const key of ["DATABASE_URL", "DATABASE_POOL_URL", "AUDIT_DATABASE_URL"]) delete env[key];
+  return env;
+}
+
 function run(file: string): Promise<{ file: string; ok: boolean; tail: string }> {
   return new Promise((resolve) => {
     const child = spawn(runner, [...baseArgs, join(TEST_DIR, file)], {
       stdio: ["ignore", "pipe", "pipe"],
+      env: childEnv(file),
     });
     let out = "";
     child.stdout.on("data", (d) => (out += d));
