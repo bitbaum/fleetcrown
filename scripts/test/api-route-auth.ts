@@ -54,6 +54,12 @@ const GUARDS = [
   "getWidgetTokenByToken", // fcw_* write-only widget token
   // Signed webhooks from other services
   "WEBHOOK_SECRET",
+  "readSignedOrangeCatBody", // the OrangeCat HMAC door — verifies WEBHOOK_SECRET
+  // Guards reached through a shared handler factory. These are not a twelfth
+  // way to answer "who is calling" — each one wraps a mechanism already listed
+  // above. They are here because the rule is that a route must NAME its
+  // mechanism, and a route that delegates names the delegate.
+  "entityAttrHandlers", // → requirePrivateApiAccess, in src/lib/api/entity-attrs.ts
 ] as const;
 
 /**
@@ -194,6 +200,7 @@ for (const id of Object.keys(PUBLIC)) {
 // believe they just shipped correctly.
 const SELF_AUTH_MARKERS = [
   "verifyOrangeCatWebhookSignature",
+  "readSignedOrangeCatBody", // the same check, moved behind one door
   "verifySolonSignature",
   "stripe.webhooks.constructEvent",
   "requireCronAuth",
@@ -206,10 +213,12 @@ if (!matcherExclusion) {
   problems.push("src/proxy.ts: the matcher exclusion pattern could not be read at all");
 } else {
   const exemptPrefixes = matcherExclusion.split("|").map((p) => p.replace(/\\\./g, "."));
+  let selfAuthFound = 0;
   for (const file of files) {
     const src = readFileSync(file, "utf8");
     const marker = SELF_AUTH_MARKERS.find((m) => src.includes(m));
     if (!marker) continue;
+    selfAuthFound += 1;
 
     // "api/orangecat/site" — the URL path, route groups and the file name gone.
     const urlPath = relative(API_ROOT, dirname(file)).split(sep).join("/");
@@ -223,6 +232,19 @@ if (!matcherExclusion) {
           `(api/orangecat/, api/solon/, …) or add its prefix to the matcher.`,
       );
     }
+  }
+
+  // Finding nothing is not the same as finding nothing wrong. This check is
+  // derived from markers in the source, so the day a receiver stops naming one
+  // — by moving its verification behind a helper, which is exactly what
+  // happened to the three OrangeCat routes — the loop above examines zero
+  // routes and reports success. An empty result here means the markers are
+  // stale, not that the matcher is correct.
+  if (selfAuthFound === 0) {
+    problems.push(
+      "no route matched any SELF_AUTH_MARKERS — the markers are stale, so the " +
+        "proxy-exemption check silently examined nothing. Update SELF_AUTH_MARKERS.",
+    );
   }
 }
 
