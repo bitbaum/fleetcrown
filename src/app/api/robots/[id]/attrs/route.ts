@@ -1,53 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
-import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
-import {
-  upsertEntityAttribute,
-  deleteEntityAttribute,
-  SetAttrBody,
-  DeleteAttrBody,
-} from "@/db/queries/utils";
+/** Attributes on a robot. The guard keeps `/api/robots/<a person's id>/attrs`
+ *  from writing through the wrong door — the attribute table does not care what
+ *  kind the entity is, so this route has to. */
+import type { NextRequest } from "next/server";
+import { entityAttrHandlers } from "@/lib/api/entity-attrs";
 import { getRobotDetail } from "@/db/queries/robots";
-import { requirePrivateApiAccess } from "@/lib/private-zone-api";
-import { isActorCapabilityError } from "@/config/actors";
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const access = await requirePrivateApiAccess();
-  if (access instanceof NextResponse) return access;
-  const { userId } = access;
-  const idOrResp = await readIdParam(params);
-  if (idOrResp instanceof NextResponse) return idOrResp;
+const handlers = entityAttrHandlers(
+  async (userId, id) => (await getRobotDetail(userId, id)) !== null,
+);
 
-  const robot = await getRobotDetail(userId, idOrResp);
-  if (!robot) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const dataOrResp = await readJsonBody(req, SetAttrBody);
-  if (dataOrResp instanceof NextResponse) return dataOrResp;
-
-  try {
-    const ok = await upsertEntityAttribute(userId, idOrResp, dataOrResp.key, dataOrResp.value);
-    if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json({ ok: true });
-  } catch (e: unknown) {
-    if (isActorCapabilityError(e)) {
-      return NextResponse.json({ error: e.message }, { status: 403 });
-    }
-    throw e;
-  }
+export function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  return handlers.POST(req, ctx);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const access = await requirePrivateApiAccess();
-  if (access instanceof NextResponse) return access;
-  const { userId } = access;
-  const idOrResp = await readIdParam(params);
-  if (idOrResp instanceof NextResponse) return idOrResp;
-
-  const robot = await getRobotDetail(userId, idOrResp);
-  if (!robot) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const dataOrResp = await readJsonBody(req, DeleteAttrBody);
-  if (dataOrResp instanceof NextResponse) return dataOrResp;
-
-  await deleteEntityAttribute(userId, idOrResp, dataOrResp.key);
-  return NextResponse.json({ ok: true });
+export function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  return handlers.DELETE(req, ctx);
 }

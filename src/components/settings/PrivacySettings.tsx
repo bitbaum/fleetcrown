@@ -14,6 +14,73 @@ type Mode = "view" | "set" | "change" | "disable";
 
 const PIN_DIGITS_MIN = 4;
 
+/**
+ * The submit envelope all three PIN forms share: clear the error, call the
+ * endpoint, read `{ ok, error }` back, and turn a thrown fetch into a message
+ * instead of a form that silently stops responding. Each form still owns its
+ * own fields and its own call — only the envelope was identical three times.
+ */
+function usePinSubmit(onSuccess: () => void) {
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function run(call: () => Promise<Response>, whenRefused: string) {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await call();
+      const data = (await res.json()) as { ok: boolean; error?: string };
+      if (!data.ok) {
+        setErr(data.error ?? whenRefused);
+        return;
+      }
+      onSuccess();
+    } catch {
+      setErr("Network error — try again");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return { err, setErr, loading, run };
+}
+
+/** The two rules Set and Change both enforce. The noun differs; the rules do not. */
+function pinProblem(newPin: string, confirm: string, noun: "PIN" | "New PIN"): string | null {
+  if (newPin.length < PIN_DIGITS_MIN) return `${noun} must be at least ${PIN_DIGITS_MIN} digits`;
+  if (newPin !== confirm) return `${noun}s don't match`;
+  return null;
+}
+
+function PinFormActions({
+  loading,
+  onCancel,
+  label,
+  busyLabel,
+  danger = false,
+}: {
+  loading: boolean;
+  onCancel: () => void;
+  label: string;
+  busyLabel: string;
+  danger?: boolean;
+}) {
+  return (
+    <div className="flex gap-2">
+      <button
+        type="submit"
+        disabled={loading}
+        className={danger ? "ui-btn-danger" : "ui-btn-primary"}
+      >
+        {loading ? busyLabel : label}
+      </button>
+      <button type="button" onClick={onCancel} className="ui-btn-secondary">
+        Cancel
+      </button>
+    </div>
+  );
+}
+
 export function PrivacySettings() {
   const { data, refetch } = useFetch<PinStatus>("/api/auth/pin");
   const { lock } = usePrivateZone();
@@ -194,34 +261,16 @@ function PinInput({
 function SetPinForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: () => void }) {
   const [newPin, setNewPin] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { err, setErr, loading, run } = usePinSubmit(onSuccess);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (newPin.length < PIN_DIGITS_MIN) {
-      setErr(`PIN must be at least ${PIN_DIGITS_MIN} digits`);
+    const problem = pinProblem(newPin, confirm, "PIN");
+    if (problem) {
+      setErr(problem);
       return;
     }
-    if (newPin !== confirm) {
-      setErr("PINs don't match");
-      return;
-    }
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await postJson("/api/auth/pin/setup", { newPin });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!data.ok) {
-        setErr(data.error ?? "Couldn't set PIN");
-        return;
-      }
-      onSuccess();
-    } catch {
-      setErr("Network error — try again");
-    } finally {
-      setLoading(false);
-    }
+    await run(() => postJson("/api/auth/pin/setup", { newPin }), "Couldn't set PIN");
   }
 
   return (
@@ -229,14 +278,7 @@ function SetPinForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: 
       <PinInput label="New PIN" value={newPin} onChange={setNewPin} placeholder="••••" autoFocus />
       <PinInput label="Confirm PIN" value={confirm} onChange={setConfirm} placeholder="••••" />
       {err && <p className="ui-error-xs">{err}</p>}
-      <div className="flex gap-2">
-        <button type="submit" disabled={loading} className="ui-btn-primary">
-          {loading ? "Saving…" : "Save PIN"}
-        </button>
-        <button type="button" onClick={onCancel} className="ui-btn-secondary">
-          Cancel
-        </button>
-      </div>
+      <PinFormActions loading={loading} onCancel={onCancel} label="Save PIN" busyLabel="Saving…" />
     </form>
   );
 }
@@ -245,34 +287,16 @@ function ChangePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucces
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { err, setErr, loading, run } = usePinSubmit(onSuccess);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (newPin.length < PIN_DIGITS_MIN) {
-      setErr(`New PIN must be at least ${PIN_DIGITS_MIN} digits`);
+    const problem = pinProblem(newPin, confirm, "New PIN");
+    if (problem) {
+      setErr(problem);
       return;
     }
-    if (newPin !== confirm) {
-      setErr("New PINs don't match");
-      return;
-    }
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await postJson("/api/auth/pin/setup", { currentPin, newPin });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!data.ok) {
-        setErr(data.error ?? "Couldn't change PIN");
-        return;
-      }
-      onSuccess();
-    } catch {
-      setErr("Network error — try again");
-    } finally {
-      setLoading(false);
-    }
+    await run(() => postJson("/api/auth/pin/setup", { currentPin, newPin }), "Couldn't change PIN");
   }
 
   return (
@@ -287,40 +311,23 @@ function ChangePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucces
       <PinInput label="New PIN" value={newPin} onChange={setNewPin} placeholder="••••" />
       <PinInput label="Confirm new PIN" value={confirm} onChange={setConfirm} placeholder="••••" />
       {err && <p className="ui-error-xs">{err}</p>}
-      <div className="flex gap-2">
-        <button type="submit" disabled={loading} className="ui-btn-primary">
-          {loading ? "Saving…" : "Change PIN"}
-        </button>
-        <button type="button" onClick={onCancel} className="ui-btn-secondary">
-          Cancel
-        </button>
-      </div>
+      <PinFormActions
+        loading={loading}
+        onCancel={onCancel}
+        label="Change PIN"
+        busyLabel="Saving…"
+      />
     </form>
   );
 }
 
 function DisablePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSuccess: () => void }) {
   const [currentPin, setCurrentPin] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { err, loading, run } = usePinSubmit(onSuccess);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await deleteJson("/api/auth/pin/setup", { currentPin });
-      const data = (await res.json()) as { ok: boolean; error?: string };
-      if (!data.ok) {
-        setErr(data.error ?? "Couldn't disable PIN");
-        return;
-      }
-      onSuccess();
-    } catch {
-      setErr("Network error — try again");
-    } finally {
-      setLoading(false);
-    }
+    await run(() => deleteJson("/api/auth/pin/setup", { currentPin }), "Couldn't disable PIN");
   }
 
   return (
@@ -337,14 +344,13 @@ function DisablePinForm({ onCancel, onSuccess }: { onCancel: () => void; onSucce
         autoFocus
       />
       {err && <p className="ui-error-xs">{err}</p>}
-      <div className="flex gap-2">
-        <button type="submit" disabled={loading} className="ui-btn-danger">
-          {loading ? "Disabling…" : "Disable PIN"}
-        </button>
-        <button type="button" onClick={onCancel} className="ui-btn-secondary">
-          Cancel
-        </button>
-      </div>
+      <PinFormActions
+        loading={loading}
+        onCancel={onCancel}
+        label="Disable PIN"
+        busyLabel="Disabling…"
+        danger
+      />
     </form>
   );
 }
