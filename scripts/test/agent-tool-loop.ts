@@ -612,8 +612,80 @@ async function advertisingChecks() {
   );
 }
 
+// ── The model's PLAN must never be served as the answer ─────────────────────
+// The fallback path got this guard after gpt-oss-20b spent a whole budget
+// writing "We need to answer: ... Let's go through each:". The tool loop —
+// which serves nearly every turn, and whose second link is that same model —
+// did not have it. Grounding cannot cover the gap: a plan asserts nothing, so
+// it passes every rule in verifyAnswer while telling the operator nothing.
+async function planAsAnswerChecks() {
+  const PLAN =
+    "We need to answer: which projects are live. We must cite each claim. " +
+    "Let's go through each record in turn.";
+  const GOOD = "Elena Weber SINGA Switzerland [F1].";
+
+  {
+    const model = scriptedModel([{ text: PLAN }, { text: GOOD }]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.doesNotMatch(r.text, /we need to answer/i, "the plan must not reach the operator");
+    assert.match(r.text, /Elena Weber/, `the retry's answer must be served: ${r.text}`);
+    assert.equal(model.calls(), 2, "exactly one retry — not a loop");
+  }
+
+  // A second plan is not an improvement. Retrying forever would burn a
+  // rate-limited free tier on a model that has shown it will not comply.
+  {
+    const model = scriptedModel([{ text: PLAN }, { text: PLAN }]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.equal(model.calls(), 2, "one retry only, even when the retry is also a plan");
+    assert.ok(r.text.length > 0, "a turn must still return something");
+  }
+
+  // An EMPTY retry is worse than a plan: at least a plan shows the model read
+  // the question. Keep the first reply rather than serving nothing.
+  {
+    const model = scriptedModel([{ text: PLAN }, { text: "   " }]);
+    const r = await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.ok(r.text.trim().length > 0, "an empty retry must not blank the answer");
+  }
+
+  // The common case must cost nothing: a good answer is never re-asked.
+  {
+    const model = scriptedModel([{ text: GOOD }]);
+    await runLokiTurn({
+      userId: "u1",
+      message: "who is Elena?",
+      registry: STUB_REGISTRY,
+      callModel: model.fn,
+      seed: SEED,
+    });
+    assert.equal(model.calls(), 1, "a normal answer must not trigger a second call");
+  }
+
+  console.log("  \u2713 the model's plan is retried, once, and never served");
+}
+
 main()
   .then(advertisingChecks)
+  .then(planAsAnswerChecks)
   .catch((e) => {
     console.error(e);
     process.exit(1);

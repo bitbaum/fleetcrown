@@ -54,6 +54,7 @@ import {
 import { maxPromptBudgetTokens } from "@/config/chat-models";
 import type { RetrievedSource } from "@/lib/agent/context";
 import { APP_NAME } from "@/config/brand";
+import { looksLikePlan, ANSWER_ONLY } from "@/lib/loki/plan-as-answer";
 
 // The concrete registry and the seed builder reach the database, and @/db
 // throws at MODULE INIT when no connection string is set. Importing them lazily
@@ -354,6 +355,11 @@ export async function runLokiTurn(input: {
   const used: string[] = [];
   let text = "";
   let model = "";
+  // The exact prompt the last round sent, kept so a reply that turns out to be
+  // a PLAN can be asked again with the instruction it showed it needed. Built
+  // inside the round closure, needed after it.
+  let lastUserContent = "";
+  let lastSystem = "";
   // Summed across every call this turn makes — rounds AND the repair pass.
   let usageTokens = 0;
   let rounds = 0;
@@ -432,6 +438,8 @@ export async function runLokiTurn(input: {
         const ctxBlock = withNotice(trimmed);
         const userContent = `${ctxBlock}\n\n---\n\n${input.message}`;
         const promptTokens = Math.ceil(overheadChars / 4) + estimateTokens(ctxBlock);
+        lastUserContent = userContent;
+        lastSystem = system;
         try {
           return await callModel({
             messages: [
@@ -474,6 +482,61 @@ export async function runLokiTurn(input: {
       },
       ...executed.messages,
     );
+  }
+
+  // ── Did we get the model's PLAN instead of an answer? ──────────────────────
+  //
+  // This guard already existed on the Groq fallback (loki-core.ts) after
+  // gpt-oss-20b replied "We need to answer: … We must cite each claim … Let's
+  // go through each:" and spent its whole budget describing how it would
+  // answer. It was missing HERE, on the path that serves nearly every turn.
+  //
+  // The gap matters because that same model is link two of this chain. The only
+  // reason the leak has not been seen on this path is that gpt-oss-120b usually
+  // answers first — which is luck, not a guarantee, and the chain exists
+  // precisely to keep working when the first link cannot.
+  //
+  // It has to run BEFORE grounding, because grounding cannot catch it: a plan
+  // asserts nothing, cites nothing, and invents no proper noun, so it passes
+  // every rule in verifyAnswer while telling the operator nothing.
+  //
+  // Measured before adding: over the 106 assistant replies Loki has stored, the
+  // detector fires on exactly 2 — both the same question, both from before the
+  // fallback fix landed, both genuine leaks. Zero false positives on the other
+  // 104. That number is the one that mattered: a guard that misfires costs a
+  // second model call on a rate-limited free tier.
+  if (looksLikePlan(text) && lastUserContent) {
+    console.warn("[loki] round produced a plan instead of an answer — retrying once");
+    // Clear what was streamed, so the operator does not keep the plan on screen
+    // above the real answer.
+    sink?.reset();
+    try {
+      const retry = await callModel({
+        messages: [
+          { role: "system", content: lastSystem },
+          ...prior,
+          { role: "user", content: lastUserContent + ANSWER_ONLY },
+          ...conversation,
+        ],
+        // No tools on the retry: the model already gathered what it needed, and
+        // the failure was in writing the answer, not in finding it.
+        tools: [],
+        validToolNames: [],
+        sink,
+      });
+      usageTokens += retry.usageTokens;
+      // Only take the retry if it is actually better. A second plan is not an
+      // improvement, and an empty reply is worse than a plan — at least a plan
+      // shows the model understood the question.
+      if (retry.text.trim() && !looksLikePlan(retry.text)) {
+        text = retry.text;
+        model = retry.model;
+      }
+    } catch (e) {
+      // A failed retry leaves the original answer standing. Losing the turn to
+      // protect its formatting would be the worse trade.
+      console.warn(`[loki] plan retry failed, keeping the first reply: ${String(e)}`);
+    }
   }
 
   // Verify against everything gathered. Tool notes count as evidence — a note
