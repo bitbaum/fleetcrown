@@ -68,8 +68,25 @@ async function main() {
   });
 
   await check("capacity is the SUM across keyed vendors — that is the point of the chain", () => {
-    withEnv({ ...KEYS, GROQ_API_KEY: "x", OPENROUTER_API_KEY: "y" }, () => {
+    // Keys derived from the chain rather than listed by hand. The previous
+    // version set exactly GROQ + OPENROUTER and compared against the sum over
+    // EVERY provider — the same thing only while the chain had exactly two
+    // vendors. ai-kit 1.8.0 added Google as a third and this went red, which is
+    // the gate doing its job: the assertion was about capacity, but it was
+    // WRITTEN as an assumption about how many vendors exist.
+    const allKeys = Object.fromEntries(CHAT_CHAIN.map((p) => [p.keyEnv, "x"]));
+    withEnv({ ...KEYS, ...allKeys }, () => {
       const expected = CHAT_CHAIN.reduce((n, p) => n + p.dailyTokens, 0);
+      assert(dayCapacityTokens() === expected, `expected ${expected}, got ${dayCapacityTokens()}`);
+    });
+  });
+
+  await check("an UNKEYED vendor contributes nothing to the total", () => {
+    // Only testable once a third vendor existed: with two, "all keyed" and
+    // "some keyed" were the same set, so the subset case could not be stated.
+    const [first, second] = CHAT_CHAIN;
+    withEnv({ ...KEYS, [first!.keyEnv]: "x", [second!.keyEnv]: "y" }, () => {
+      const expected = first!.dailyTokens + second!.dailyTokens;
       assert(dayCapacityTokens() === expected, `expected ${expected}, got ${dayCapacityTokens()}`);
     });
   });
