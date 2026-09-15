@@ -15,7 +15,7 @@
  * be orphans).
  *
  * The second-obvious implementation is a hand-written list of deleteMany calls
- * in dependency order. That is what aoz-housing had, and it silently went stale
+ * in dependency order. That is what aoz-begleitung had, and it silently went stale
  * the moment someone added a table: the reset kept reporting success while
  * leaving rows behind.
  *

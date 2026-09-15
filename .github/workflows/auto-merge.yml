@@ -62,7 +62,7 @@ jobs:
       # Dependabot `github_actions` bump stalls forever: the sweep tries, the
       # merge API refuses, it logs "leaving for the next sweep", and repeats —
       # while still exiting 0. ai-kit #11 sat green for nine days that way, and
-      # aoz-housing #122 for nine more.
+      # aoz-begleitung #122 for nine more.
       #
       # A PAT also makes the queue drain at CI speed rather than at the
       # schedule's. A dispatch made with GITHUB_TOKEN emits no workflow_run, so

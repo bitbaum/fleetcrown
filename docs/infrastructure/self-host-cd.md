@@ -9,7 +9,7 @@ each app repo.
 Before this, `scripts/hetzner/install-push-deploy.sh` installed a **local
 pre-push hook** — so a deploy only happened when someone pushed *from the
 laptop that had the hook*. Anything merged on GitHub (which is how PRs land)
-never reached the box. That is how `aoz-housing` sat with merged fixes and a
+never reached the box. That is how `aoz-begleitung` sat with merged fixes and a
 five-month-old production build: CI was green, main was correct, and nothing
 had ever shipped it.
 

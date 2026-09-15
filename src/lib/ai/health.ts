@@ -13,7 +13,7 @@
  * This tracker is the fix: the real call sites in groq.ts, agent/llm.ts and
  * vision.ts record a success or failure once per top-level call, and
  * `/api/health` reads it back as an informational field. Mirrors the same
- * `@bitbaum/ai-kit` tracker adopted fleet-wide (aoz-housing, surf-your-life,
+ * `@bitbaum/ai-kit` tracker adopted fleet-wide (aoz-begleitung, surf-your-life,
  * truthseeker) — `downAfter: 3` matches their convention.
  */
 

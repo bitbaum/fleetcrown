@@ -15,7 +15,7 @@ MANIFEST="${MANIFEST:-$HERE/apps.conf}"
 
 # default_branch [repo_dir] — the remote's default branch name, resolved not guessed.
 #
-# 28 repos here use `main`, 3 use `master` (aoz-housing, dotfiles,
+# 28 repos here use `main`, 3 use `master` (aoz-begleitung, dotfiles,
 # sbb-lost-found), and 2 have no origin/HEAD set at all. Anything that hardcodes
 # "origin/main" silently does the wrong thing on a fifth of the fleet — a gate
 # that cannot find its base branch either blocks everything or checks nothing.

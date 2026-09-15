@@ -1,6 +1,6 @@
 // SSOT for matching a Loki project key to the name a user actually gave
-// their terminal tab. Project keys are slugs ("revampit", "aoz-housing"); the
-// live tab might be "revamp-it", "Revamp It", "AOZ Housing", etc. Matching used
+// their terminal tab. Project keys are slugs ("revampit", "aoz-begleitung"); the
+// live tab might be "revamp-it", "Revamp It", "AOZ Begleitung", etc. Matching used
 // to be exact-case-insensitive in three places (the since-deleted zellij
 // adapter, agent-runtime.ts, desktop poller), so "revampit" ≠ "revamp-it" →
 // inject silently failed. Normalize away case + punctuation and they collapse.

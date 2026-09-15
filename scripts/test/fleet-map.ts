@@ -53,7 +53,7 @@ const rows: RegisterRow[] = [
     slug: "aoz-demo",
     name: "AOZ demo",
     description: null,
-    repo: "aoz-housing",
+    repo: "aoz-begleitung",
     site: site({ kind: "demo", status: "demo" }),
     loki: null,
     orangecat: null,

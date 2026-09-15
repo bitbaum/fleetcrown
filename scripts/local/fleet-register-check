@@ -103,7 +103,7 @@ $REALITY"
 # again, while the host is renamed whenever the project is. When they disagree
 # the widget does not error — widget.js 200, widget-boot 200 {"active":false},
 # launcher never mounts, nothing logged. Two live sites sat like that for
-# months (aoz-housing bound to aoz-wohnen.orangecat.ch, sbb-lost-found bound to
+# months (aoz-begleitung bound to aoz-wohnen.orangecat.ch, sbb-lost-found bound to
 # sbb.orangecat.ch), and the repair needed no redeploy, only a rebind.
 #
 # Here rather than in `verify` for the same reason as the reality check: it

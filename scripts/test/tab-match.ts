@@ -20,12 +20,12 @@ eq(normalizeTabKey("revamp-it"), "revampit", "normalize hyphen");
 eq(normalizeTabKey("AOZ Housing"), "aozhousing", "normalize space+case");
 eq(normalizeTabKey("revamp_it"), "revampit", "normalize underscore");
 
-const tabs = ["revamp-it", "OrangeCat", "Loki", "Tab #5", "AOZ Housing"];
+const tabs = ["revamp-it", "OrangeCat", "Loki", "Tab #5", "AOZ Begleitung"];
 
 // hyphen / case / space drift → matches, preserving live casing
 eq(findMatchingTab("revampit", tabs), "revamp-it", "revampit → revamp-it");
 eq(findMatchingTab("orangecat", tabs), "OrangeCat", "case-insensitive exact");
-eq(findMatchingTab("aoz-housing", tabs), "AOZ Housing", "slug → spaced name");
+eq(findMatchingTab("aoz-begleitung", tabs), "AOZ Begleitung", "slug → spaced name");
 eq(findMatchingTab("loki", tabs), "Loki", "lowercase → live casing");
 
 // exact case-insensitive takes precedence over a normalized collision
