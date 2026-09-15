@@ -31,9 +31,14 @@ import type { ProjectRow } from "@/db/queries/projects";
 import type { ProjectProfile } from "@/lib/control-types";
 import { AUTO_INJECT_MODE_VALUES, type AutoInjectMode } from "@/config/beacon";
 
-/** Normalize a name for fuzzy matching: lowercase + strip `_` and `-` so
- *  variant spellings of the same project collapse to one form. */
-function normalizeName(s: string): string {
+/** Normalize a PROJECT name for fuzzy matching: lowercase + strip `_` and `-`
+ *  so variant spellings of the same project collapse to one form.
+ *
+ *  Named for what it normalizes because lib/people-dedupe exports a
+ *  `normalizeName` that does something else — it folds diacritics and
+ *  punctuation for person names. Two functions with one name and different
+ *  rules is a bug waiting for whoever imports the wrong one. */
+function normalizeProjectName(s: string): string {
   return s.toLowerCase().replace(/[-_]/g, "");
 }
 
@@ -61,10 +66,10 @@ export function matchProfile(
   dir: string,
   dbProjects: ProjectRow[],
 ): ProjectProfile | null {
-  const tabLower = normalizeName(tab);
-  const dirBaseLower = normalizeName(path.basename(dir));
+  const tabLower = normalizeProjectName(tab);
+  const dirBaseLower = normalizeProjectName(path.basename(dir));
   const match = dbProjects.find((p) => {
-    const n = normalizeName(p.name);
+    const n = normalizeProjectName(p.name);
     return (
       n === tabLower ||
       n === dirBaseLower ||
@@ -104,10 +109,10 @@ export function resolveAutoInjectOverride(
     match = dbProjects.find((p) => p.id === entityProjectId);
   }
   if (!match) {
-    const tabLower = normalizeName(tab);
-    const dirBaseLower = normalizeName(path.basename(dir));
+    const tabLower = normalizeProjectName(tab);
+    const dirBaseLower = normalizeProjectName(path.basename(dir));
     match = dbProjects.find((p) => {
-      const n = normalizeName(p.name);
+      const n = normalizeProjectName(p.name);
       return n === tabLower || n === dirBaseLower;
     });
   }

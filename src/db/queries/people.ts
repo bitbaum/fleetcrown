@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, sql, desc, inArray, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
+import { escapeLike } from "@/lib/sql-escape";
 import {
   deriveRelationshipHealth,
   type RelationshipHealth,
@@ -16,10 +17,6 @@ import {
   HEALTH_FADING_DAYS,
 } from "@/lib/constants/people";
 import { z } from "zod";
-
-function escapeLike(s: string): string {
-  return s.replace(/[%_\\]/g, "\\$&");
-}
 
 export type PersonWithAttributes = {
   id: string;
