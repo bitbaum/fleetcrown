@@ -47,6 +47,12 @@ has "$out" "claude CLI missing"
 hasnt "$out" "SECRETSECRET"
 hasnt "$out" "ALSOSECRET"
 
+echo "→ no env credential and no sign-in is DOWN with the instruction, not DISABLED"
+: > "$tmp/.env"
+out=$(RUNNER_ENV="$tmp/.env" CLAUDE_BIN=/bin/true RUNNER_HOME="$tmp/nohome" RUNNER_USER=nobody bash "$SCRIPT" --report 2>&1)
+has "$out" "^down:"
+has "$out" "no env credential and no sign-in"
+
 echo
 echo "builder-auth-check: passed $pass, failed $fail"
 [ "$fail" -eq 0 ]

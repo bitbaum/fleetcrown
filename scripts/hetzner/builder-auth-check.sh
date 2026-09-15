@@ -29,6 +29,8 @@ set -uo pipefail   # NOT -e: a probe that dies must still produce a verdict
 MON="${MON:-/opt/monitoring}"
 RUNNER_ENV="${RUNNER_ENV:-/opt/loki/runner/.env}"
 CLAUDE_BIN="${CLAUDE_BIN:-/home/ubuntu/.local/bin/claude}"
+RUNNER_USER="${RUNNER_USER:-ubuntu}"
+RUNNER_HOME="${RUNNER_HOME:-/home/$RUNNER_USER}"
 PROBE_TIMEOUT="${PROBE_TIMEOUT:-90}"
 REPORT_ONLY=0
 [ "${1:-}" = "--report" ] && REPORT_ONLY=1
@@ -44,15 +46,25 @@ probe() {
   local key tok
   key=$(grep -oE '^ANTHROPIC_API_KEY="?[^" ]*' "$RUNNER_ENV" 2>/dev/null | sed -E 's/^ANTHROPIC_API_KEY="?//')
   tok=$(grep -oE '^CLAUDE_CODE_OAUTH_TOKEN="?[^" ]*' "$RUNNER_ENV" 2>/dev/null | sed -E 's/^CLAUDE_CODE_OAUTH_TOKEN="?//')
-  [ -n "$key$tok" ] || { echo "no ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN in $RUNNER_ENV"; return 3; }
   [ -x "$CLAUDE_BIN" ] || { echo "claude CLI missing at $CLAUDE_BIN"; return 3; }
+  cd /tmp || return 3
   # Same precedence as the runner: an API key (the sanctioned automated path)
-  # wins over a subscription token.
+  # wins over a subscription token, and either wins over the sign-in file.
   if [ -n "$key" ]; then
-    cd /tmp && timeout "$PROBE_TIMEOUT" env HOME=/home/ubuntu ANTHROPIC_API_KEY="$key" \
+    timeout "$PROBE_TIMEOUT" env HOME="$RUNNER_HOME" ANTHROPIC_API_KEY="$key" \
+      "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
+  elif [ -n "$tok" ]; then
+    timeout "$PROBE_TIMEOUT" env HOME="$RUNNER_HOME" CLAUDE_CODE_OAUTH_TOKEN="$tok" \
       "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
   else
-    cd /tmp && timeout "$PROBE_TIMEOUT" env HOME=/home/ubuntu CLAUDE_CODE_OAUTH_TOKEN="$tok" \
+    # Exactly the runner's situation since 2026-09-15: no env credential, the
+    # runner user's own `claude` sign-in on the box. That login WORKED while a
+    # stale env token was overriding it — "no token" was never a verdict.
+    [ -f "$RUNNER_HOME/.claude/.credentials.json" ] || {
+      echo "no env credential and no sign-in at $RUNNER_HOME/.claude — run 'claude' once as $RUNNER_USER on the box"
+      return 3
+    }
+    timeout "$PROBE_TIMEOUT" sudo -u "$RUNNER_USER" -H env -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_API_KEY \
       "$CLAUDE_BIN" -p "reply with the single word ok" --output-format text 2>&1
   fi
 }
