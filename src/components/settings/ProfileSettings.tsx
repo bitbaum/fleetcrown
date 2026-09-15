@@ -117,8 +117,8 @@ export function ProfileSettings({ user }: Props) {
               </span>
             ) : willRename ? (
               <>
-                Will be saved as{" "}
-                <span className="font-mono text-text-secondary">{normalized}</span>. {USERNAME_RULE}
+                Will be saved as <span className="font-mono text-text-secondary">{normalized}</span>
+                . {USERNAME_RULE}
               </>
             ) : (
               USERNAME_RULE
@@ -143,11 +143,7 @@ export function ProfileSettings({ user }: Props) {
           pushed the button down on every save, moving the target the user had
           just aimed at. */}
       <div className="flex items-center gap-3">
-        <button
-          onClick={save}
-          disabled={saving || !dirty || tooShort}
-          className="ui-btn-primary"
-        >
+        <button onClick={save} disabled={saving || !dirty || tooShort} className="ui-btn-primary">
           {saving && <Loader2 className="ui-spinner" />}
           Save changes
         </button>
