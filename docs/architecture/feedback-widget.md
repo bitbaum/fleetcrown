@@ -267,6 +267,7 @@ over polling for readiness.
 | `GET /api/widget-boot` | token in query | Render gate + heartbeat. The remote kill switch: pausing or revoking a token hides the widget on every site without touching their HTML. Also what makes Coverage "Live" observed truth rather than install intent. |
 | `POST /api/feedback` | widget token in body | Ingest. Zod-validate, clamp lengths, resolve token → project (reject revoked), rate limit per IP+token, insert, `jsonOk`. |
 | `OPTIONS /api/feedback` | public | CORS preflight. Echo origin if it passes the token's `origins` allowlist (or any when unset). |
+| `GET /f/[token]` | **track token in path** | One report, for the person who FILED it. Public by construction — the reporter has no account, which is the whole point. The token is the credential (192 bits, `mintTrackToken`), exactly as `share/task/` works for a crew assignee. Signed in, the page also BINDS the report to that account so it joins their Sent list. |
 | `GET/POST/DELETE /api/projects/[id]/widget-token` | session | Owner manages the token: create, view snippet, revoke/rotate. |
 | `GET /api/projects/[id]/feedback` + `PATCH /api/feedback/[id]` | session | Inbox list + status transitions (archive, resolve). |
 
@@ -275,9 +276,11 @@ Gotchas already known:
   origin (`https://loki.orangecat.ch`). Botsmann shipped the tag but stayed
   “Waiting for the first page load” because CSP blocked `widget.js` (2026-08-14).
   Coverage Live = boot heartbeat after the script actually runs, not after HTML contains the tag.
-- **proxy.ts allowlist** (Next 16 middleware): `api/feedback` and `widget.js` must be
-  added to the matcher exclusions or anonymous submissions bounce to /sign-in
-  (same class as the OC-rail `proxy.ts` lesson).
+- **proxy.ts allowlist** (Next 16 middleware): `api/feedback`, `widget.js` and `f/`
+  must be added to the matcher exclusions or anonymous submissions — and the
+  reporter's own follow-up page — bounce to /sign-in (same class as the OC-rail
+  `proxy.ts` lesson). `f/` behind auth is the sharpest version of this bug: the
+  reader is by definition not signed in yet, so the page could never do its job.
 - **Rate limiting is already solved — do not write another one.** `src/lib/rate-limit.ts`
   exists and is owned by the shared `limitkit` package (see dotfiles/SHARED.md);
   `/api/feedback`, `/api/widget-boot` and `/api/widget/transcribe` all use it.
@@ -354,6 +357,62 @@ matters):
   (`src/components/feedback/FeedbackItemRow.tsx`) and one actions hook.
 - The Control strip's "Full inbox" deep-links to `/feedback?project=…`; the
   sidebar Feedback item carries a NEW-count badge from `/api/feedback/summary`.
+
+## The reporter's half of the loop (2026-09-15)
+
+Until this, the loop ended at "Sent. Thank you." — and for the person who filed
+the report, that was the end of it. They had no way to learn whether anything
+came of what they said, and the operator had no way to show them. A report is
+one half of a conversation the product only ever rendered one side of.
+
+Three pieces close it, and the seam between them is the interesting part.
+
+**`site_feedback` now records the SENDER.** The table already had a `user_id`:
+the project owner, who RECEIVES the report. `submitter_email`,
+`submitter_user_id` and `track_token` say who sent it. The two directions must
+never share a scoping helper — confusing them renders one person's inbox as
+another person's outbox.
+
+**Attribution needs an act by the ACCOUNT, never by the submission.** Ingest is
+public and unauthenticated; the address on a report is whatever the poster
+typed. So ingest deliberately does NOT look the address up and does NOT bind:
+that would let anyone push rows into a stranger's account forever, and a
+response that varied by whether an address has an account would make the
+endpoint an enumeration oracle for anyone who reads their own page source.
+Binding happens in `lib/feedback/claim.ts`, on one of two acts: **possession**
+(opening the track link — the token is the proof) or a **proven address** (the
+account's own email is verified AND matches). The second is gated on
+`emailVerified`; without that gate, registering with someone else's address
+would show you their reports. Residual, accepted and documented: anyone can
+file a report claiming an address they do not own, and it will later appear in
+that person's Sent list — spam into a list, granting no access to anything of
+theirs, at the same trust level the product already extends to that address
+when it emails it.
+
+**What the reporter sees is a NARROWING, not a second status model.**
+`work-phase.ts` answers the operator's question in operator vocabulary: stuck,
+failed, needs verify, a run diagnostic, a pull request number. Every one of
+those is meaningless or actively wrong on a page shown to a stranger — a raw
+run error names internal services and paths belonging to the operator's
+product. `lib/feedback/public-status.ts` maps it to four rungs (Received →
+Being worked on → Fix on the way → Shipped) written for someone who does not
+work here, and carries over the one honesty rule unchanged: **Shipped means the
+live product changed.** A finished agent run, a merged PR and a green deploy
+all still read "on the way". `scripts/test/feedback-reporter-loop.ts` pins that,
+and pins that no operator vocabulary crosses the wall.
+
+Also here: `/feedback` gained a **Received / Sent** split (same heading, two
+relationships — reports addressed to your projects, versus reports you filed on
+other people's sites); the widget's success screen became an invitation rather
+than a dead end, and no longer auto-closes when it has a link to offer; and the
+"your feedback shipped" email carries the report's page so it can show what
+changed instead of only asserting that something did.
+
+One rule the public page must keep: it is read-only and side-effect-free
+(`lib/feedback/public-view.ts`, NOT `attachFeedbackWork`). The operator's
+loader re-checks GitHub, can advance the auto-ship ledger and fires
+notifications — all correct for an operator opening their own inbox, all wrong
+on a page a stranger holds a link to and a bot can crawl.
 
 ## Out of scope
 

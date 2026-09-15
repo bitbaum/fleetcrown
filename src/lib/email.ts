@@ -163,6 +163,10 @@ export function feedbackShippedTemplate(input: {
   site: string;
   excerpt: string;
   page?: string | null;
+  /** The report's permanent page. Absent for rows filed before track tokens
+   *  existed, in which case the mail simply carries no button — it never
+   *  fabricates a link. */
+  trackUrl?: string | null;
 }) {
   const subject = mailSubject("feedback_shipped", input.site);
   const where = input.page ? ` on ${input.page}` : "";
@@ -172,13 +176,27 @@ export function feedbackShippedTemplate(input: {
   // visitor chose, so unescaped they are an injection path into our mail.
   const safeExcerpt = escapeHtml(input.excerpt);
   const safeWhere = input.page ? ` on ${escapeHtml(input.page)}` : "";
+  // The URL is ours (minted by mintTrackToken, rendered from our own origin),
+  // not visitor-authored — but it is interpolated into an href, so escape it on
+  // the same principle that governs everything else in this template.
+  const safeTrack = input.trackUrl ? escapeHtml(input.trackUrl) : null;
   const html = emailShell(`
     <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:${EMAIL_THEME.ink};">Your feedback shipped</h2>
     ${p(`You reported: “${safeExcerpt}”`)}
     ${p(`A fix just went live${safeWhere}. Thanks for pointing it out.`)}
+    ${
+      safeTrack
+        ? `<div style="text-align:center;">${btn(safeTrack, "See what changed →")}</div>` +
+          small(
+            `That link stays live — it is your report's own page, and it keeps working whether or not you have a ${APP_NAME} account.`,
+          )
+        : ""
+    }
   `);
   // The text/plain alternative is not markup, so it keeps the raw values.
-  const text = `You reported: "${input.excerpt}"\n\nA fix just went live${where}. Thanks for pointing it out.`;
+  const text =
+    `You reported: "${input.excerpt}"\n\nA fix just went live${where}. Thanks for pointing it out.` +
+    (input.trackUrl ? `\n\nSee what changed: ${input.trackUrl}` : "");
   return { subject, html, text };
 }
 

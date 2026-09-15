@@ -3,7 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AUTH_COPY, ROUTES } from "@/config/auth";
+import { AUTH_COPY, ROUTES, safeAuthRedirect } from "@/config/auth";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/config/demo";
 import { APP_NAME } from "@/config/brand";
 import {
@@ -38,9 +38,7 @@ function FormInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? ROUTES.APP_HOME;
-  const safeCallback =
-    callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : ROUTES.APP_HOME;
+  const safeCallback = safeAuthRedirect(searchParams.get("callbackUrl"), ROUTES.APP_HOME);
 
   const urlError = searchParams.get("error");
   const urlErrorMsg =

@@ -4771,6 +4771,76 @@
     @apply bg-surface-base;
   }
 
+  /* ── Tracked report — what the PERSON WHO FILED feedback sees ─────────────
+     Two surfaces share this layer: the public /f/<token> page (no account, and
+     often a first-ever look at Loki) and the Sent list inside the app. They
+     must agree, because the same ladder seen twice with two different shapes
+     reads as two different states.
+
+     The ladder is deliberately four flat rungs and not a percentage. A reporter
+     asked one question — "did anything happen to my report" — and a progress
+     bar would invite a second one we cannot answer honestly ("how far along?").
+     Rungs behind the current one fill; the current one is ringed; the ones
+     ahead stay empty. Nothing animates: this page is often opened weeks later
+     and motion would imply live movement that is not there. */
+  .ui-track-ladder {
+    @apply flex items-center gap-1.5;
+  }
+  .ui-track-rung {
+    @apply h-1.5 flex-1 rounded-full bg-border-subtle;
+  }
+  .ui-track-rung-done {
+    @apply bg-accent-primary;
+  }
+  .ui-track-rung-current {
+    @apply bg-accent-primary ring-2 ring-accent-primary/30;
+  }
+  /* Archived: the report left the ladder rather than climbing it, so the rungs
+     read as inert rather than as progress that stalled. */
+  .ui-track-rung-closed {
+    @apply bg-border-default;
+  }
+  .ui-track-step-row {
+    @apply mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1;
+  }
+  .ui-track-step-label {
+    @apply text-sm font-semibold text-text-primary;
+  }
+  .ui-track-step-detail {
+    @apply text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-track-meta {
+    @apply text-micro uppercase tracking-wider text-text-muted;
+  }
+  /* The reporter's own words, quoted back. Left border rather than a card:
+     it is evidence of what they said, not another panel competing with the
+     status above it. */
+  .ui-track-quote {
+    @apply border-l-2 border-border-default pl-3 text-sm leading-relaxed text-text-primary;
+    /* Their text, verbatim and possibly long, pasted from anywhere: wrap it
+       rather than letting one unbroken string push the page sideways on a
+       phone. */
+    overflow-wrap: anywhere;
+  }
+  /* What the agent said it did — shown only once shipped. Quieter than the
+     quote above: it is the answer, but the reporter's own words are the anchor
+     they came back for. */
+  .ui-track-did {
+    @apply rounded-xl border border-border-subtle bg-surface-base px-3.5 py-3 text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-track-invite {
+    @apply rounded-2xl border border-border-subtle bg-surface-base p-5 sm:p-6;
+  }
+  .ui-track-invite-title {
+    @apply text-base font-semibold text-text-primary;
+  }
+  .ui-track-invite-body {
+    @apply mt-1.5 text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-track-invite-actions {
+    @apply mt-4 flex flex-col gap-2 sm:flex-row;
+  }
+
   /* ── Crew — assignments handed to humans ──────────────────────────────────
      The board answers ONE question: who owes me what, and what do I owe them.
      So a row is scannable in a single line (title · who · when) and only opens

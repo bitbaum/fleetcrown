@@ -12,6 +12,7 @@ import { getWidgetTokenByToken } from "@/db/queries/widget-tokens";
 import { bumpDuplicateFeedback, insertSiteFeedback } from "@/db/queries/site-feedback";
 import { feedbackContentHash } from "@/lib/feedback/content-hash";
 import { notifyFeedbackReceived } from "@/lib/feedback/notify-new";
+import { mintTrackToken, normalizeSubmitterEmail, trackUrl } from "@/lib/feedback/submitter";
 
 /**
  * Public ingest for the embeddable feedback widget (docs/architecture/
@@ -40,6 +41,12 @@ const FeedbackBody = z.object({
   token: z.string().startsWith("fcw_").max(100),
   suggestion: z.string().trim().min(1).max(2000),
   contact: z.string().max(200).optional(),
+  /** The reporter's address, when the widget collected it as its own field.
+   *  Optional and additive: bundles already embedded on customer sites send
+   *  only `contact`, and an address typed in there is still picked up below.
+   *  widget.js is cached in other people's pages — the server can never assume
+   *  the newest bundle is the one talking to it. */
+  email: z.string().max(254).optional(),
   page: z.string().max(300).optional(),
   url: z.string().max(1000).optional(),
   pageTitle: z.string().max(300).optional(),
@@ -127,8 +134,37 @@ export async function POST(req: NextRequest) {
   // inbox noise dropped. Idempotent for the visitor (they still see success).
   const contentHash = feedbackContentHash(data.suggestion, data.page ?? null);
   const bumped = await bumpDuplicateFeedback(token.projectId, contentHash);
-  if (bumped)
+  if (bumped) {
+    // No track link on this path, deliberately.
+    //
+    // It is tempting to hand back the EXISTING row's token so a re-filed report
+    // still gets a follow-up page. But dedupe is per-PROJECT across all
+    // visitors, not per person: two strangers reporting "the signup button is
+    // broken" on the same page collide here. So the usual recipient of that
+    // token would be someone other than the person who filed the report — and
+    // the token is a capability, not a receipt. It would let them read that
+    // report's page and, worse, CLAIM it into their own account (possession is
+    // how claiming works). A duplicate submitter gets the plain confirmation
+    // instead; the widget renders that case without a follow-up block.
     return NextResponse.json({ ok: true, duplicateOf: bumped }, { headers: CORS_HEADERS });
+  }
+
+  // Who filed it. `email` is the widget's own field; `contact` is the older
+  // free-text box people also type addresses into — either is accepted, and
+  // anything that is not an address stays in `contact` unattributed.
+  const submitterEmail =
+    normalizeSubmitterEmail(data.email) ?? normalizeSubmitterEmail(data.contact);
+  // NOTE what is deliberately NOT done here: the address is not looked up and
+  // the row is not bound to a matching account. This endpoint is public and
+  // unauthenticated — its token sits in the customer's page source — so the
+  // address is whatever the poster typed. Binding on it would let anyone push
+  // rows into a stranger's account forever, with the victim never having
+  // touched anything. Binding happens on an act of the ACCOUNT's own instead
+  // (opening the track link, or verifying the address): see lib/feedback/claim.ts.
+  //
+  // The lookup is also skipped because its ANSWER is dangerous: a response
+  // that varied by whether an address has a Loki account would turn this route
+  // into an account-enumeration oracle for anyone who reads their own HTML.
 
   const created = await insertSiteFeedback({
     projectId: token.projectId,
@@ -136,6 +172,8 @@ export async function POST(req: NextRequest) {
     tokenId: token.id,
     suggestion: data.suggestion,
     contact: data.contact ?? null,
+    submitterEmail,
+    trackToken: mintTrackToken(),
     page: data.page ?? null,
     url: data.url ?? null,
     pageTitle: data.pageTitle ?? null,
@@ -153,5 +191,14 @@ export async function POST(req: NextRequest) {
   // Duplicate bumps above stay silent — the row announced when first filed.
   void notifyFeedbackReceived(created);
 
-  return NextResponse.json({ ok: true }, { headers: CORS_HEADERS });
+  // The link is the point of the whole exchange: it is what turns "sent into
+  // the void" into something the reporter can come back to. Returned from the
+  // request's own origin so one deployment never hands out another's URLs.
+  return NextResponse.json(
+    {
+      ok: true,
+      ...(created.trackToken ? { track: trackUrl(req.nextUrl.origin, created.trackToken) } : {}),
+    },
+    { headers: CORS_HEADERS },
+  );
 }

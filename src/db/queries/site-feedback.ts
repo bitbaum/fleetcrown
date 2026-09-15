@@ -1,4 +1,4 @@
-import { and, count, desc, eq, getTableColumns, inArray, max, sql } from "drizzle-orm";
+import { and, count, desc, eq, getTableColumns, inArray, isNull, max, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   entities,
@@ -347,4 +347,132 @@ export async function setFeedbackStatus(
     .where(and(eq(siteFeedback.id, id), eq(siteFeedback.userId, userId)))
     .returning();
   return updated ?? null;
+}
+
+// ─── The sender side ────────────────────────────────────────────────────────
+// Everything above answers "what did I RECEIVE" and is scoped by
+// siteFeedback.userId (the project owner). Everything below answers "what did
+// I SEND" and is scoped by submitterUserId / submitterEmail / trackToken.
+// The two must never share a scoping helper — that is how one person's inbox
+// would end up rendered as another person's outbox.
+
+/** One report as its own reporter sees it: their text, where they filed it,
+ *  and enough of the project to name the site back to them. Deliberately NOT
+ *  FeedbackListItem — that carries operator-only fields (runnable, contact of
+ *  other reporters is not here but the shape invites drift). */
+export type SentFeedbackItem = Omit<SiteFeedback, "screenshots" | "contact" | "userAgent"> & {
+  hasScreenshots: boolean;
+  projectName: string;
+  liveUrl: string | null;
+};
+
+const sentColumns = () => {
+  const {
+    screenshots: _screenshots,
+    contact: _contact,
+    userAgent: _userAgent,
+    ...cols
+  } = getTableColumns(siteFeedback);
+  return cols;
+};
+
+const hasScreenshotsSql = sql<boolean>`(${siteFeedback.screenshots} IS NOT NULL AND jsonb_array_length(${siteFeedback.screenshots}) > 0)`;
+
+/** The project's public URL, via its OWNER's registration — the owner is
+ *  siteFeedback.userId, never the reporter. */
+const projectLiveUrlSql = sql<string | null>`(
+  SELECT ${userProjects.liveUrl} FROM ${userProjects}
+  WHERE ${userProjects.entityProjectId} = ${entities.id}
+    AND ${userProjects.userId} = ${siteFeedback.userId}
+    AND ${userProjects.isActive} = true
+  ORDER BY ${userProjects.createdAt} ASC LIMIT 1
+)`;
+
+/**
+ * One report by its track token. No user scoping BY DESIGN: the token IS the
+ * authorization, exactly like a password-reset link, which is what lets a
+ * reporter with no account follow their own report.
+ *
+ * That is also why the token has to be the whole `where`. Adding a convenience
+ * fallback here (by id, by email) would turn a capability into a guess.
+ */
+export async function getFeedbackByTrackToken(token: string): Promise<SentFeedbackItem | null> {
+  const [row] = await db
+    .select({
+      ...sentColumns(),
+      hasScreenshots: hasScreenshotsSql.as("has_screenshots"),
+      projectName: entities.name,
+      liveUrl: projectLiveUrlSql.as("live_url"),
+    })
+    .from(siteFeedback)
+    .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .where(eq(siteFeedback.trackToken, token))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Bind one report to the account now holding its track link.
+ *
+ * Only ever fills an EMPTY submitterUserId. A report already bound to someone
+ * is not re-pointed by whoever opens the link next — a forwarded email would
+ * otherwise silently move a report out of the reporter's own Sent list.
+ * Returns whether this call did the binding.
+ */
+export async function claimFeedbackByTrackToken(token: string, userId: string): Promise<boolean> {
+  const [claimed] = await db
+    .update(siteFeedback)
+    .set({ submitterUserId: userId })
+    .where(and(eq(siteFeedback.trackToken, token), isNull(siteFeedback.submitterUserId)))
+    .returning({ id: siteFeedback.id });
+  return !!claimed;
+}
+
+/**
+ * Bind every unclaimed report filed from `email` to this account.
+ *
+ * Called when an address is PROVEN to belong to the account — registration
+ * that verified it, or the verify-email link. Never on a bare sign-in with an
+ * unverified address: `submitter_email` comes from a public, unauthenticated
+ * widget post, so anyone can file a report claiming any address, and claiming
+ * on an unverified match would hand them whatever else that address filed.
+ */
+export async function claimFeedbackByEmail(email: string, userId: string): Promise<number> {
+  const claimed = await db
+    .update(siteFeedback)
+    .set({ submitterUserId: userId })
+    .where(
+      and(
+        eq(siteFeedback.submitterEmail, email.toLowerCase()),
+        isNull(siteFeedback.submitterUserId),
+      ),
+    )
+    .returning({ id: siteFeedback.id });
+  return claimed.length;
+}
+
+/**
+ * Reports this account SENT, newest first.
+ *
+ * Matches on the bound account only. The email half of the claim rule is
+ * applied by claimFeedbackByEmail at verification time rather than re-tested
+ * on every read, so a row appears here because something proved it belongs to
+ * this account — not because an address on it happens to look familiar today.
+ */
+export async function listFeedbackSentByUser(
+  userId: string,
+  limit = 200,
+): Promise<SentFeedbackItem[]> {
+  return db
+    .select({
+      ...sentColumns(),
+      hasScreenshots: hasScreenshotsSql.as("has_screenshots"),
+      projectName: entities.name,
+      liveUrl: projectLiveUrlSql.as("live_url"),
+    })
+    .from(siteFeedback)
+    .innerJoin(entities, eq(siteFeedback.projectId, entities.id))
+    .where(eq(siteFeedback.submitterUserId, userId))
+    .orderBy(desc(siteFeedback.createdAt))
+    .limit(limit);
 }

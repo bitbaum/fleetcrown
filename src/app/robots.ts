@@ -34,6 +34,14 @@ export default function robots(): MetadataRoute.Robots {
           "/setup",
           "/sign-out",
           "/beacon/",
+          "/feedback",
+          // Tokenized report pages. The token in the path IS the credential, so
+          // a crawled one is a leaked one — it would sit in an index, in a
+          // referrer, and in whatever republishes the crawl. The page also
+          // carries `robots: noindex, nofollow` itself, because a crawler that
+          // ignores this file is exactly the crawler this matters for.
+          // Listing the prefix here discloses nothing: no token appears in it.
+          "/f/",
           "/_next/",
         ],
       },

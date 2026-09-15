@@ -24,6 +24,26 @@ export const ROUTES = {
   RUNNER_HOME: "/control",
 } as const;
 
+/**
+ * Where to send someone after they sign in or register, given a `callbackUrl`
+ * that arrived in the URL.
+ *
+ * Lives here, next to the routes, because BOTH auth forms need it and only one
+ * of them used to have it — written inline, so the other simply ignored the
+ * parameter and always went to its own default. That is what made a feedback
+ * reporter who registered from their own report land on an empty dashboard
+ * instead of back on the thing they had asked about.
+ *
+ * The guard is an open-redirect guard: a path only, never a URL. `//evil.com`
+ * is a protocol-relative URL that `startsWith("/")` alone happily accepts, so
+ * it is rejected explicitly — otherwise our sign-in page becomes a convenient
+ * launchpad for somebody else's phishing page.
+ */
+export function safeAuthRedirect(raw: string | null | undefined, fallback: string): string {
+  if (!raw) return fallback;
+  return raw.startsWith("/") && !raw.startsWith("//") ? raw : fallback;
+}
+
 /** Query flag that lets a Fleet Runner operator open the public marketing
  *  homepage on purpose (reviewing their own hero) instead of being bounced to
  *  RUNNER_HOME. Without it the landing page is unreachable inside the app. */

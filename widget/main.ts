@@ -268,6 +268,28 @@ input { margin-bottom: 10px; }
 .ok p { font-size: 13px; margin-top: 12px; color: ${theme.text}; }
 .ok .sub { font-size: 11px; color: ${theme.textSecondary}; margin-top: 4px; }
 
+/* ---- what happens next: the invitation, on the success view ----
+   Left-aligned on purpose. The tick above is a centred full stop; this block
+   is something to read and act on, and centred prose reads as more decoration
+   after the confirmation rather than an offer. */
+.after { margin-top: 18px; padding-top: 16px; border-top: 1px solid ${theme.border}; text-align: left; }
+.after .lead { font-size: 12px; color: ${theme.textSecondary}; line-height: 1.5; }
+.after a.track {
+  display: block; margin-top: 10px; padding: 10px 12px; border-radius: ${rs};
+  background: ${theme.accent}; color: ${ink}; font-size: 13px; font-weight: 600;
+  text-align: center; text-decoration: none; letter-spacing: -.01em;
+}
+.after a.track:hover { background: ${theme.accentHover}; }
+.after a.join {
+  display: block; margin-top: 8px; padding: 9px 12px; border-radius: ${rs};
+  border: 1px solid ${theme.borderStrong}; color: ${theme.text}; font-size: 12px;
+  text-align: center; text-decoration: none;
+}
+.after a.join:hover { border-color: ${theme.borderDark}; }
+.after .why { font-size: 11px; color: ${theme.textMuted}; margin-top: 8px; line-height: 1.5; }
+.after .close { display: block; margin: 12px auto 0; font-size: 11px; color: ${theme.textMuted}; }
+.after .close:hover { color: ${theme.textSecondary}; }
+
 /* ---- element picker bar: the same surface, at the top ---- */
 .pickbar {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 2147483002;
@@ -797,9 +819,17 @@ function h<K extends keyof HTMLElementTagNameMap>(
     });
 
     const contact = h("input");
+    // `type=email` would let a browser refuse a name, and people legitimately
+    // type one here; the server decides what is an address (normalizeSubmitterEmail).
     contact.type = "text";
-    contact.placeholder = "Name / email (optional)";
-    contact.autocomplete = "off";
+    // The placeholder used to be "Name / email (optional)", which asked for
+    // something without saying what it buys. Naming the payoff is the whole
+    // difference between an ignored field and a reachable reporter — and being
+    // reachable is what makes the follow-up loop work at all.
+    contact.placeholder = "Email — get told when this is fixed";
+    // "email" rather than "off": the browser should offer to fill this. It is
+    // the one field on the panel it can actually answer.
+    contact.autocomplete = "email";
     // Same cap the ingest route enforces, so the field stops accepting text at
     // the limit instead of taking it and losing the whole report on submit.
     // The textarea already does this; the contact input did not.
@@ -1041,6 +1071,19 @@ function h<K extends keyof HTMLElementTagNameMap>(
       submitting = false;
       sendBtn.textContent = "Send";
       fab.style.display = "";
+      // Put the form back, ALWAYS and here.
+      //
+      // The success view replaces the panel's children, and the panel object
+      // itself survives being closed — openPanel re-appends the same node. So
+      // whichever way the visitor dismisses a success view (the Close button,
+      // Escape, or the backdrop), the next open must find a form and not a
+      // stale "Sent. Thank you." they can neither use nor get past.
+      //
+      // This lived at the call site while the success view auto-closed on its
+      // own timer, which made the timer the only path that restored anything.
+      // The moment the view could outlive that timer, Escape and the backdrop
+      // became two ways to break the widget until a page reload.
+      restoreForm();
     }
 
     function onKeydown(e: KeyboardEvent) {
@@ -1208,6 +1251,11 @@ function h<K extends keyof HTMLElementTagNameMap>(
             // with a very long pathname, lost their entire report with no way
             // to know why. Caps: api/feedback/route.ts FeedbackBody.
             contact: contact.value.trim().slice(0, 200) || undefined,
+            // The same value under its own name. The field asks for an address
+            // now, so say so rather than making the server infer it from a box
+            // that used to accept anything — `contact` stays for the bundles
+            // already cached in other people's pages.
+            email: contact.value.trim().slice(0, 200) || undefined,
             page: location.pathname.slice(0, 300),
             url: location.href.slice(0, 1000),
             pageTitle: document.title.slice(0, 300) || undefined,
@@ -1216,11 +1264,16 @@ function h<K extends keyof HTMLElementTagNameMap>(
             selectedElements: selected.length ? selected : undefined,
           }),
         });
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+          track?: string;
+        } | null;
         if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error ?? `Request failed (${res.status})`);
         }
-        showSuccess();
+        // Older deployments answer without `track`; the success view simply
+        // drops the follow-up block rather than rendering a dead link.
+        showSuccess(typeof body?.track === "string" ? body.track : null);
       } catch (err) {
         submitting = false;
         sendBtn.disabled = false;
@@ -1229,35 +1282,116 @@ function h<K extends keyof HTMLElementTagNameMap>(
       }
     }
 
-    function showSuccess() {
+    /** Put the form back for the next open (the success view replaced it). */
+    function restoreForm() {
+      panel.textContent = "";
+      panel.append(
+        hdr,
+        chips,
+        hint,
+        textarea,
+        cnt,
+        diagNote,
+        contact,
+        attachRow,
+        shotsContainer,
+        row,
+        errEl,
+        keys,
+      );
+    }
+
+    /**
+     * The success view — and the only moment this widget has the reporter's
+     * attention with nothing left to ask of them.
+     *
+     * It used to say "Sent. Thank you." and close itself after 2.2 seconds.
+     * That is a dead end: the person who just described a problem has no way
+     * to learn whether anything came of it, and no reason to come back. So the
+     * confirmation now carries two offers — follow THIS report (works with no
+     * account, the link is a capability), or keep every report you ever send in
+     * one place (an account).
+     *
+     * Two consequences worth stating, because both were bugs waiting to be
+     * written:
+     *
+     *  • The auto-close is GONE when there is something to act on. A panel that
+     *    dismisses itself in two seconds cannot offer a link — it would vanish
+     *    mid-reach. The reporter closes it, or it stays.
+     *  • The links open in a new tab with `noopener`. This widget runs inside
+     *    somebody else's page, and navigating THEIR tab away because a visitor
+     *    left feedback would be a hostile thing for an embed to do.
+     */
+    function showSuccess(track: string | null) {
       panel.textContent = "";
       const ok = h("div", "ok");
-      const tick = h("div", "tick", "✓");
       ok.append(
-        tick,
+        h("div", "tick", "✓"),
         h("p", undefined, "Sent. Thank you."),
-        h("div", "sub", "An agent picks this up in Loki."),
+        h("div", "sub", "It's in front of the people who can fix it."),
       );
-      panel.appendChild(ok);
-      setTimeout(() => {
-        closePanel();
-        // Rebuild the form for the next open (success view replaced it).
-        panel.textContent = "";
-        panel.append(
-          hdr,
-          chips,
-          hint,
-          textarea,
-          cnt,
-          diagNote,
-          contact,
-          attachRow,
-          shotsContainer,
-          row,
-          errEl,
-          keys,
+
+      if (track) {
+        const after = h("div", "after");
+        after.appendChild(
+          h(
+            "div",
+            "lead",
+            "Want to know what happens to it? This link follows your report from here to fixed.",
+          ),
         );
-      }, 2200);
+
+        const trackLink = h("a", "track", "Follow your report");
+        trackLink.href = track;
+        trackLink.target = "_blank";
+        trackLink.rel = "noopener noreferrer";
+        after.appendChild(trackLink);
+
+        // `new URL` throws on anything unparseable. The server sends an
+        // absolute URL, but this runs after a submission that already
+        // SUCCEEDED — throwing here would replace the reporter's confirmation
+        // with a blank panel and make a saved report look lost.
+        let trackPathname = "";
+        try {
+          trackPathname = new URL(track).pathname;
+        } catch {
+          trackPathname = "";
+        }
+        const joinLink = h("a", "join", "Or join Loki and keep them all in one place");
+        // `from=widget` marks where the account came from; `callbackUrl` lands
+        // them back on this very report once they are in, so registering
+        // answers the question they actually had instead of dropping them on a
+        // dashboard with nothing in it. (`callbackUrl` is the name both auth
+        // forms read — see safeAuthRedirect in src/config/auth.ts.) Only the
+        // PATH is passed, so the open-redirect guard on the other side accepts
+        // it whatever host this widget is embedded on.
+        joinLink.href = trackPathname
+          ? `${apiBase}/sign-up?from=widget&callbackUrl=${encodeURIComponent(trackPathname)}`
+          : `${apiBase}/sign-up?from=widget`;
+        joinLink.target = "_blank";
+        joinLink.rel = "noopener noreferrer";
+        after.appendChild(joinLink);
+
+        after.appendChild(
+          h(
+            "div",
+            "why",
+            "Loki is where this site's team works. An account keeps every report you send, and tells you when one ships.",
+          ),
+        );
+
+        const closeBtn = h("button", "close", "Close");
+        closeBtn.addEventListener("click", closePanel);
+        after.appendChild(closeBtn);
+        ok.appendChild(after);
+        panel.appendChild(ok);
+        return;
+      }
+
+      // Nothing to follow (an older deployment answered without a link) — the
+      // old behaviour is still the right one: confirm and get out of the way.
+      panel.appendChild(ok);
+      setTimeout(closePanel, 2200);
     }
 
     // Programmatic entry point: open prefilled so "report this" is one click.

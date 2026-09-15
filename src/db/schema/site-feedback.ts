@@ -40,6 +40,35 @@ export const siteFeedback = pgTable(
     suggestion: text("suggestion").notNull(),
     /** Optional name/email the visitor left for follow-up. */
     contact: text("contact"),
+    /**
+     * The reporter's email, lowercased — derived from `contact` when it parses
+     * as one (see lib/feedback/submitter.ts). Kept in its own column because
+     * `contact` is free text and half of it is names: matching a report to the
+     * account that later registers needs a field that is only ever an address.
+     *
+     * NOTE the two user columns on this table point in OPPOSITE directions.
+     * `userId` above is the project OWNER — who RECEIVES this. The two below
+     * are who SENT it. Confusing them leaks one person's inbox into another's.
+     */
+    submitterEmail: text("submitter_email"),
+    /** The Loki account that filed this, once bound. Two ways in, both in
+     *  lib/feedback/claim.ts: opening the track link while signed in
+     *  (possession of the token is the proof), or registering with a VERIFIED
+     *  email that matches submitterEmail. Never set from an unverified match. */
+    submitterUserId: uuid("submitter_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * Unguessable follow token, minted for every row at ingest and handed
+     * straight back to the widget. It is the whole reason a visitor can watch
+     * their own report without an account: /f/<token> reads by this alone.
+     *
+     * Nullable for the rows that predate it — they simply have no public page,
+     * which is honest. Never derive it from anything about the row; it is a
+     * capability, and a guessable one would hand strangers other people's
+     * reports (including the contact email on them).
+     */
+    trackToken: text("track_token").unique(),
     page: text("page"),
     url: text("url"),
     pageTitle: text("page_title"),
@@ -76,6 +105,10 @@ export const siteFeedback = pgTable(
     index("idx_site_feedback_project").on(t.projectId, t.status),
     index("idx_site_feedback_user").on(t.userId, t.status),
     index("idx_site_feedback_dedupe").on(t.projectId, t.contentHash),
+    // The "reports I sent" list: both halves of the claim rule, each indexed,
+    // because the Sent view matches on either (bound account OR verified email).
+    index("idx_site_feedback_submitter").on(t.submitterUserId, t.createdAt),
+    index("idx_site_feedback_submitter_email").on(t.submitterEmail),
   ],
 );
 

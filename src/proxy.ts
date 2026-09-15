@@ -39,6 +39,13 @@ export const config = {
      *   share/task/                – an assignment handed to a human; the minted
      *                                token IS their credential and they have no
      *                                account by design (see config/crew.ts)
+     *   f/                         – one feedback report, for the person who FILED it.
+     *                                Same bearer-token story as share/task/: the
+     *                                reporter typed a sentence into a widget on
+     *                                someone else's site and has no account, so the
+     *                                track token is the whole credential. Behind auth
+     *                                this page could never do its job — the reader is
+     *                                by definition not signed in yet.
      *   beacon                     – public beacon page
      *   api/auth                   – NextAuth internal endpoints
      *   api/agent/install          – serves the @loki/agent CLI for curl|node install
@@ -71,6 +78,6 @@ export const config = {
      *                                register behind a session is a register with a private copy
      *                                on every consumer. api/fleet/status stays protected.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|beacon|fleet|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/fleet/register|api/fleet/map|api/invitations/|api/share/task/|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|rss\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|frontier|mission|philosophy|investors|roadmap|pricing|releases|privacy|terms|license|docs|blog|changelog|support|u/|share/project/|share/task/|f/|beacon|fleet|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/fleet/register|api/fleet/map|api/invitations/|api/share/task/|api/orangecat/|api/solon/|api/newsletter|api/feedback|api/widget-boot|api/widget/transcribe|widget\\.js).+)",
   ],
 };
