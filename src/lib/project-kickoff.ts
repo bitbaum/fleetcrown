@@ -44,8 +44,9 @@ export const KICKOFF_MIN_DESCRIPTION = 10;
 /**
  * Long enough to brief an agent with. NOT a gate — an advisory.
  *
- * The floor above is 10 characters, which "a hiding box" clears. HamsterCheek
- * sat at one sentence and every derived thing was thin in exactly that way:
+ * The floor above is 10 characters, which "a time capsule" clears. Zeitkastli
+ * (called HamsterCheek when this happened, renamed 2026-09-15) sat at one
+ * sentence and every derived thing was thin in exactly that way:
  * the extractor could not infer a stack from it and wrote "Unknown" instead.
  * Everything the button produces is a function of this text, so a brief that
  * clears the floor but says almost nothing deserves to be pointed at rather
@@ -66,7 +67,7 @@ export type KickoffSetupInput = {
   /**
    * Goals are hidden behind the private-zone PIN, so `goalCount` is unknown
    * rather than zero. getProjectDetail returns `[]` when locked; believing that
-   * offered to "plan the milestones" for HamsterCheek, which already had five —
+   * offered to "plan the milestones" for Zeitkastli, which already had five —
    * and one press would have written a second roadmap on top of the first.
    */
   goalsLocked?: boolean;

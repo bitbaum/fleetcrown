@@ -9,8 +9,8 @@ import {
 
 assert.equal(cleanDescription("Local repository imported from loki-ui"), null);
 assert.equal(
-  cleanDescription("A weatherproof box for valuables."),
-  "A weatherproof box for valuables.",
+  cleanDescription("A weatherproof capsule you leave somewhere."),
+  "A weatherproof capsule you leave somewhere.",
 );
 
 assert.equal(isPublicTestArtifact("smoke-1783188931860-gh"), true);
@@ -26,7 +26,7 @@ const dumpFirst =
   "KNOWN BUG — v1 entity-create hits RLS 42501 and the ORANGECAT_WEBHOOK_SECRET is unset.";
 assert.equal(publicHeroNote(dumpFirst), null, "a dump that starts as a dump stays hidden");
 
-const short = "HamsterCheek is a weatherproof box for valuables.";
+const short = "Zeitkastli is a weatherproof capsule you leave somewhere.";
 assert.equal(publicHeroNote(short), short);
 
 const essay =

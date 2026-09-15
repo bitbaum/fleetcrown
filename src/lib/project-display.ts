@@ -44,7 +44,7 @@ export function publicHeroNote(desc: string | null | undefined): string | null {
  *
  * A model asked to fill 17 named fields from a two-line description writes
  * "Unknown" for the ones it cannot infer rather than omitting them (the
- * extraction prompt only says "omit if unknown" on 3 of them). HamsterCheek is
+ * extraction prompt only says "omit if unknown" on 3 of them). Zeitkastli is
  * the live case: `stack: "Unknown"`, `competitors: "Unknown"`. Those are
  * truthy, so every "is this filled?" check counted them — health scored a point
  * for a field that says nothing, the context header claimed a field complete,

@@ -52,12 +52,12 @@ assert.ok(scoped.every((c) => c.kind === "send" && !c.chatOnly));
 
 const withGoal = composerChips({
   projectCount: 4,
-  selectedProjects: ["HamsterCheek"],
+  selectedProjects: ["Zeitkastli"],
   selectedGoal: { title: "Integrate the lock" },
 });
 assert.equal(withGoal.length, 3);
 assert.equal(withGoal[0].id, "active_goal");
-assert.ok(withGoal[0].template?.includes("HamsterCheek"));
+assert.ok(withGoal[0].template?.includes("Zeitkastli"));
 assert.ok(withGoal[0].template?.includes("Integrate the lock"));
 assert.deepEqual(
   withGoal.slice(1).map((c) => c.id),

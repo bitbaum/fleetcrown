@@ -40,7 +40,7 @@ function eq<T>(actual: T, expected: T, label: string): void {
 const FLEET = [
   "Bitbaum",
   "BiasLens",
-  "HamsterCheek",
+  "Zeitkastli",
   "Prime tower",
   "lifeops",
   "aoz-housing",

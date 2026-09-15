@@ -14,7 +14,7 @@ function row(id: string, title: string, projectKeys: string[] = ["loki"]) {
 assert.equal(normalizeConversationTitle("move forward on loki"), "move-forward");
 assert.equal(normalizeConversationTitle("Move forward"), "move-forward");
 assert.equal(
-  normalizeConversationTitle("Move HamsterCheek toward its active goal: Integrate all feat…"),
+  normalizeConversationTitle("Move Zeitkastli toward its active goal: Integrate all feat…"),
   "move-forward",
 );
 assert.equal(normalizeConversationTitle("code review for kivvi"), "code-review");

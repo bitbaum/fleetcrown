@@ -5,7 +5,7 @@
 //   1. A placeholder must never reach an agent. "STACK: Unknown" is worse than
 //      no stack line — it reads as a decision.
 //   2. Every dispatch kind must tell the agent to push. A kickoff run built
-//      HamsterCheek's whole first milestone, green, and left it uncommitted in
+//      Zeitkastli's whole first milestone, green, and left it uncommitted in
 //      the workspace when its session ended; the instruction to commit existed
 //      but only inside an "if the repository is empty" clause.
 // Run: npx tsx scripts/test/project-dispatch-prompt.ts
@@ -55,8 +55,9 @@ function dossier(
   return {
     detail: {
       project: {
-        name: "HamsterCheek",
-        description: "description" in over ? (over.description ?? null) : "A box you hide outside.",
+        name: "Zeitkastli",
+        description:
+          "description" in over ? (over.description ?? null) : "A capsule you leave somewhere.",
       },
       attrs: over.attrs ?? {},
       linkedGoals: (over.goals ?? []).map((g, i) => ({
