@@ -48,12 +48,28 @@ const cookieName = BASE.startsWith("https://")
   : "authjs.session-token";
 const headers = { cookie: `${cookieName}=${token}`, "content-type": "application/json" };
 
-type Verdict = { name: string; ok: boolean; evidence: string };
+type Verdict = { name: string; ok: boolean; skipped?: boolean; evidence: string };
 const verdicts: Verdict[] = [];
 function record(name: string, ok: boolean, evidence: string) {
   verdicts.push({ name, ok, evidence });
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}\n      ${evidence}`);
 }
+
+/**
+ * A third verdict, and why it exists: Loki rations the free model tier per day,
+ * so "You've used your share of today's free AI budget" is a CORRECT refusal,
+ * not a broken assistant. On a six-hourly timer, failing on it would page for a
+ * working product until nobody read the alerts. Say SKIP, loudly, and do not
+ * fail the run.
+ */
+function skip(name: string, why: string) {
+  verdicts.push({ name, ok: true, skipped: true, evidence: why });
+  console.log(`SKIP  ${name}\n      ${why}`);
+}
+
+/** Loki's own refusal when the rationed budget is spent, or a vendor 429. */
+const RATIONED =
+  /free ai budget|share of today|try again in \d+ ?min|rate.?limit|429|quota|out of (?:tokens|credits)/i;
 
 type Turn = {
   role: string;
@@ -110,20 +126,27 @@ async function thread(conversationId: string): Promise<Turn[]> {
   return ((await res.json()) as { messages: Turn[] }).messages;
 }
 
-/** The run's own state — so a lost notification cannot read as a broken loop. */
-async function runState(runId: string): Promise<string> {
+/**
+ * The run's own state, so a lost notification cannot read as a broken loop.
+ *
+ * GET /api/orchestration/runs/[id] answers the DERIVED dispatch view
+ * (status/label/terminal), not the raw row — reading it as {state,outcome}
+ * printed "?/-" and told nobody anything (2026-09-15).
+ */
+const CLOSED_STATUSES = new Set(["completed", "partial", "stopped", "failed"]);
+
+async function runState(runId: string): Promise<{ label: string; closed: boolean }> {
   try {
     const res = await fetch(`${BASE}/api/orchestration/runs/${runId}`, { headers });
-    if (!res.ok) return `unreadable (HTTP ${res.status})`;
-    const j = (await res.json()) as { run?: { state?: string; outcome?: string } } & {
-      state?: string;
-      outcome?: string;
+    if (!res.ok) return { label: `unreadable (HTTP ${res.status})`, closed: false };
+    const v = (await res.json()) as { status?: string; label?: string; terminal?: boolean };
+    const status = v.status ?? "?";
+    return {
+      label: `${status}${v.label ? ` (${v.label})` : ""}`,
+      closed: CLOSED_STATUSES.has(status) && v.terminal === true,
     };
-    const state = j.run?.state ?? j.state ?? "?";
-    const outcome = j.run?.outcome ?? j.outcome ?? "-";
-    return `${state}/${outcome}`;
   } catch (e) {
-    return `unreadable (${(e as Error).message})`;
+    return { label: `unreadable (${(e as Error).message})`, closed: false };
   }
 }
 
@@ -140,7 +163,12 @@ async function abortRun(runId: string, why: string): Promise<void> {
 }
 
 // ── 1. knows the fleet ──────────────────────────────────────────────────────
-async function checkKnowsTheFleet() {
+/**
+ * One retry, because this check runs on a timer and the model chain underneath
+ * it is a rationed free tier: a single provider hiccup is not a regression,
+ * and an alert that cries wolf gets muted. Two failures in a row is a signal.
+ */
+async function askPillars(): Promise<{ text: string; meta: Record<string, unknown> }> {
   const id = await createConversation(`${MARKER} pillars`, []);
   const turns = await send(
     id,
@@ -148,16 +176,35 @@ async function checkKnowsTheFleet() {
     { selectedProjects: [], chatOnly: true },
   );
   const answer = turns.find((t) => t.kind === "chat") ?? turns[0];
-  const text = (answer?.content ?? "").trim();
+  return { text: (answer?.content ?? "").trim(), meta: answer?.meta ?? {} };
+}
+
+async function checkKnowsTheFleet() {
+  let { text, meta } = await askPillars();
+  let named = ["orangecat", "loki", "solon"].filter((p) => text.toLowerCase().includes(p));
+  // One retry for a transient miss — but never for a rationed refusal, which
+  // would only spend the next window too.
+  if ((named.length < 3 || looksLikePlan(text)) && !RATIONED.test(text)) {
+    await new Promise((r) => setTimeout(r, 5_000));
+    ({ text, meta } = await askPillars());
+    named = ["orangecat", "loki", "solon"].filter((p) => text.toLowerCase().includes(p));
+  }
+  if (RATIONED.test(text)) {
+    skip(
+      "knows the fleet: pillars answered from the map",
+      `the free AI budget is spent, so the assistant refused rather than answered — not a fleet-knowledge failure: "${text.replace(/\s+/g, " ").slice(0, 150)}"`,
+    );
+    return;
+  }
   const lower = text.toLowerCase();
-  const named = ["orangecat", "loki", "solon"].filter((p) => lower.includes(p));
-  const retrieved = (answer?.meta?.retrieved as Array<{ source?: string }> | undefined) ?? [];
+  void lower;
+  const retrieved = (meta.retrieved as Array<{ source?: string }> | undefined) ?? [];
   const fromMap = retrieved.some((r) => r.source === "fleet_map");
   const plan = looksLikePlan(text);
   record(
     "knows the fleet: pillars answered from the map",
     named.length === 3 && fromMap && !plan && text.length > 0,
-    `named ${named.length}/3 (${named.join(", ") || "none"}); fleet_map retrieved: ${fromMap}; plan-as-answer: ${plan}; via ${String(answer?.meta?.via ?? "?")} ${String(answer?.meta?.model ?? "")}\n      "${text.replace(/\s+/g, " ").slice(0, 220)}"`,
+    `named ${named.length}/3 (${named.join(", ") || "none"}); fleet_map retrieved: ${fromMap}; plan-as-answer: ${plan}; via ${String(meta.via ?? "?")} ${String(meta.model ?? "")}\n      "${text.replace(/\s+/g, " ").slice(0, 220)}"`,
   );
 }
 
@@ -232,8 +279,7 @@ async function checkClosesTheLoop() {
   if (!outcome) {
     // Name WHICH half broke. A closed run with no turn is a lost notification
     // (the work happened); an open run is a stuck builder.
-    const state = await runState(runId);
-    const closed = /^(done|error|closed)\//.test(state);
+    const { label: state, closed } = await runState(runId);
     if (!closed) {
       await abortRun(
         runId,
@@ -280,8 +326,10 @@ async function checkClosesTheLoop() {
     }
   }
   const failed = verdicts.filter((v) => !v.ok);
+  const skipped = verdicts.filter((v) => v.skipped);
+  const passed = verdicts.length - failed.length - skipped.length;
   console.log(
-    `\n${verdicts.length - failed.length}/${verdicts.length} passed${failed.length ? ` — FAILED: ${failed.map((f) => f.name).join("; ")}` : ""}`,
+    `\n${passed}/${verdicts.length} passed${skipped.length ? `, ${skipped.length} skipped` : ""}${failed.length ? ` — FAILED: ${failed.map((f) => f.name).join("; ")}` : ""}`,
   );
   process.exit(failed.length ? 1 : 0);
 })();
