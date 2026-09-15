@@ -254,6 +254,20 @@ async function checkClosesTheLoop() {
   const dispatch = turns.find((t) => t.kind === "dispatch");
   const runId = (dispatch?.meta?.runId as string | undefined) ?? null;
   const ok = dispatch?.meta?.ok === true;
+  const commandId = dispatch?.meta?.commandId as string | undefined;
+  // A dispatch to a BUSY project is held: Loki journals it and enqueues no
+  // command, so no builder can ever pick it up and no outcome can arrive. That
+  // is correct serialisation, not a broken loop — but a check that waited 20
+  // minutes and then blamed the builder taught exactly the wrong thing
+  // (2026-09-15: the blocker was this check's own previous run).
+  if (ok && runId && !commandId && dispatch?.meta?.mode === "queued") {
+    await abortRun(runId, "held behind an open run — nothing to wait for");
+    skip(
+      "closes the loop: outcome came back into the thread",
+      `the dispatch was HELD behind an open run on ${PROJECT} (no command enqueued), so no outcome could arrive. Close or abort the blocking run and re-run; the loop itself was not exercised.`,
+    );
+    return;
+  }
   if (!ok || !runId) {
     record(
       "closes the loop: dispatch accepted",
