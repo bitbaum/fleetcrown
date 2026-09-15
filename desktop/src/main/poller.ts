@@ -383,7 +383,7 @@ async function waitForAgentGenerating(dir: string, tab: string, timeoutMs = 8000
  * (success, error, or already-done dedup hit) so a claimed row never
  * lingers waiting for the 90s stale-claim reaper.
  */
-type AckPayload = { ok: boolean; error?: string; text?: string; verified?: boolean; warning?: string; workspaceId?: string }
+type AckPayload = { ok: boolean; error?: string; text?: string; verified?: boolean; warning?: string; workspaceId?: string; deliveredAt?: string }
 
 async function ackCommand(
   base: string,
@@ -434,6 +434,7 @@ async function handleCommand(
   // the command — today derived from the tab, later an opaque id; consumers
   // address by this, not by name.
   let workspaceId: string | undefined
+  let injectedAt: string | undefined
   // Token accounting: set by the dispatch case when a Claude run is delivered;
   // consumed after the ack so tracking only starts for commands that landed.
   let usageTrack: { runId: string; dir: string; deliveredAtMs: number } | null = null
@@ -591,6 +592,11 @@ async function handleCommand(
           }
           {
             injectPty(tab, effPrompt)
+            // The moment the prompt reached the agent — reported in the ack so the
+            // server stamps delivery HERE, not after the up-to-8s generating check
+            // below. A task that finishes inside that check would otherwise write
+            // a handoff that "predates" its own delivery and never close its run.
+            injectedAt = new Date().toISOString()
             // Verify against the CLI's OWN session status (~/.claude/sessions/
             // <pid>.json): a submitted prompt flips status off "idle". The
             // previous output-activity heuristic (isPtyBusy) was fooled by
@@ -730,7 +736,7 @@ async function handleCommand(
     try { fs.writeFileSync(sentinel, '1', 'utf-8') } catch { /* tmpdir unwritable — fall back to "best effort" */ }
   }
 
-  await ackCommand(base, token, command, { ok, error, verified, warning, text, workspaceId })
+  await ackCommand(base, token, command, { ok, error, verified, warning, text, workspaceId, deliveredAt: injectedAt })
 
   // Only start metering runs whose prompt actually landed — a nacked dispatch
   // is closed server-side and would never answer done:true.

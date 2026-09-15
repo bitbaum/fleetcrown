@@ -59,6 +59,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const verified = typeof body.verified === "boolean" ? body.verified : undefined;
   // Stage 2 (workspace addressing): which workspace served this command.
   const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : undefined;
+  // The runner's own injection time. It acks only after checking the agent is
+  // generating (up to 8s), so ack time is too late a floor for fast tasks.
+  const deliveredAt = typeof body.deliveredAt === "string" ? body.deliveredAt : undefined;
 
   const updated = await markCommandExecuted(id, userId, {
     ok,
@@ -91,7 +94,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         else void emitRunEvent(runId, userId, "submitted", { text, workspaceId });
         // Delivery stamp: the close paths use payload.deliveredAt as the
         // handoff-freshness floor for per-run attribution.
-        await stampRunDelivered(runId, userId).catch(() => {});
+        await stampRunDelivered(runId, userId, deliveredAt).catch(() => {});
       }
     }
   } catch {

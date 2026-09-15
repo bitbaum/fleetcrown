@@ -48,6 +48,35 @@ export function runEffectiveStartMs(run: OpenRun): number {
   return run.startedAt?.getTime() ?? 0;
 }
 
+/**
+ * When did the prompt reach the agent?
+ *
+ * The runner knows: it injects, THEN spends up to eight seconds checking that
+ * the agent is generating, THEN acks. Stamping delivery at ack time put the
+ * floor AFTER the injection, and a task that finished inside that window —
+ * the e2e health probe took five seconds — wrote a handoff that "predated"
+ * its own delivery and never closed the run (2026-09-15, run 6fe06526).
+ *
+ * So the runner reports its injection time and the server prefers it, within
+ * bounds that keep the floor honest: never before the run was created (with a
+ * minute of clock slack), never in the future. Anything else falls back to
+ * the ack time, which is what every stamp was before.
+ */
+export function deliveryStampFor(
+  reported: unknown,
+  startedAt: Date | null,
+  nowMs: number = Date.now(),
+): string {
+  const now = new Date(nowMs).toISOString();
+  if (typeof reported !== "string") return now;
+  const ms = Date.parse(reported);
+  if (!Number.isFinite(ms)) return now;
+  if (ms > nowMs + 5_000) return now;
+  const floor = (startedAt?.getTime() ?? 0) - 60_000;
+  if (ms < floor) return now;
+  return new Date(ms).toISOString();
+}
+
 export type RunClosePatch = {
   state: "done" | "error";
   outcome: OrchestrationOutcome;
