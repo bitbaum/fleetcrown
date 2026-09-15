@@ -11,21 +11,14 @@ import {
 } from "@/lib/private-zone";
 import { LEGACY_PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
 import { getSessionUserId } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 
-const attempts = new Map<string, { count: number; resetAt: number }>();
+// The limit VALUES are this route's business; the counting is not. The
+// hand-rolled Map that used to live here was a second limiter beside
+// lib/rate-limit, with the same unbounded-growth flaw limitkit's bounded store
+// exists to prevent.
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60_000;
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || now > entry.resetAt) {
-    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  return entry.count > MAX_ATTEMPTS;
-}
 
 /** GET /api/auth/pin — private-zone status for the current session. */
 export async function GET() {
@@ -50,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   // Rate-limit by user, not IP — multi-user prod has many users behind the
   // same IPv6 prefix and shared egress addresses.
-  if (isRateLimited(userId)) {
+  if (!checkRateLimit(`pin:${userId}`, MAX_ATTEMPTS, WINDOW_MS)) {
     return NextResponse.json({ ok: false, error: "Too many attempts" }, { status: 429 });
   }
 

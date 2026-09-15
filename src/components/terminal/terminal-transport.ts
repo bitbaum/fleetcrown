@@ -8,6 +8,7 @@
  */
 import type { AgentEvent, AgentLifecycle } from "@/lib/agent-execution/types";
 import type { BuilderChannel } from "@/lib/event-stream-types";
+import { postJson } from "@/lib/api/fetch";
 
 export interface TerminalStreamHandlers {
   /** Append bytes to the screen (a true byte delta). */
@@ -37,13 +38,10 @@ export interface TerminalTransport {
 }
 
 /** Fire-and-forget JSON POST. Transient failure is fine: the output stream stays
- *  the source of truth and a dropped keystroke is re-typed. */
-const postJson = (url: string, body: unknown): Promise<void> =>
-  fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
+ *  the source of truth and a dropped keystroke is re-typed — so this swallows
+ *  the rejection the shared wrapper would otherwise leave unhandled. */
+const post = (url: string, body: unknown): Promise<void> =>
+  postJson(url, body)
     .then(() => undefined)
     .catch(() => undefined);
 
@@ -74,8 +72,8 @@ export function workspaceTransport(id: string): TerminalTransport {
       };
       return () => source.close();
     },
-    sendKey: (data) => postJson(base, { action: "input", data }),
-    sendResize: (cols, rows) => void postJson(base, { action: "resize", cols, rows }),
+    sendKey: (data) => post(base, { action: "input", data }),
+    sendResize: (cols, rows) => void post(base, { action: "resize", cols, rows }),
   };
 }
 
@@ -108,14 +106,14 @@ export function runnerTransport(tab: string, channel?: BuilderChannel): Terminal
       return () => es.close();
     },
     sendKey: (data) =>
-      postJson("/api/control/tab-inject-raw", {
+      post("/api/control/tab-inject-raw", {
         kind: "key",
         tab,
         data,
         ...(ch ? { channel: ch } : {}),
       }),
     sendResize: (cols, rows) =>
-      void postJson("/api/control/tab-inject-raw", {
+      void post("/api/control/tab-inject-raw", {
         kind: "resize",
         tab,
         cols,
