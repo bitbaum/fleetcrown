@@ -54,6 +54,31 @@ export const PROJECT_ATTR = {
 
 export type ProjectAttrKey = (typeof PROJECT_ATTR)[keyof typeof PROJECT_ATTR];
 
+/**
+ * The attributes a project PUBLISHES — the outward-facing half of its identity,
+ * served on /api/fleet/map to anyone.
+ *
+ * This is an allowlist and must stay one. The table above is open (the UI lets
+ * anyone add a key) and it already holds `business_plan`, `competitors`,
+ * `partnerships` and `security_vulnerability` — a denylist, or "publish every
+ * attr", puts the next key someone types on the public internet by default.
+ * These four are public because all four are the pitch a reader is owed:
+ * what hurts, what we built, why, and where it goes.
+ *
+ * Roadmap and changelog are NOT here — they are rows, not attributes (`goals`
+ * and `user_projects.dev_log`), and each publishes a deliberately narrower
+ * projection than it stores. See `publicRoadmap`/`publicChangelog` in
+ * `lib/register/map.ts`.
+ */
+export const PUBLIC_IDENTITY_ATTRS = [
+  PROJECT_ATTR.PROBLEM,
+  PROJECT_ATTR.SOLUTION,
+  PROJECT_ATTR.MISSION,
+  PROJECT_ATTR.VISION,
+] as const satisfies readonly ProjectAttrKey[];
+
+export type PublicIdentityAttr = (typeof PUBLIC_IDENTITY_ATTRS)[number];
+
 /** Acronyms and product names that must not be sentence-cased into mush. */
 const ATTR_WORD_OVERRIDES: Record<string, string> = {
   url: "URL",

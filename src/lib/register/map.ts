@@ -1,4 +1,5 @@
 import type { RegisterRow } from "./build";
+import { PUBLIC_IDENTITY_ATTRS, type PublicIdentityAttr } from "@/config/project-attrs";
 
 /**
  * The fleet MAP: the register (what exists, where it runs, where the code is)
@@ -36,6 +37,16 @@ export type FleetMapEntry = {
     orangecat: string | null;
     solon: string | null;
   };
+  /**
+   * The six things a product owes a reader. These already existed in the
+   * profile — attributes, `goals`, `dev_log` — and were injected into every
+   * agent dispatch while being unreadable from outside the database, so a site
+   * that wanted them had no choice but to type its own copy. Published here so
+   * a page renders them instead of authoring them.
+   */
+  identity: MapIdentity;
+  roadmap: MapRoadmapItem[];
+  changelog: MapChangelogEntry[];
   /** The project's own declared next step, from its dev log. */
   next: string | null;
   now: {
@@ -83,7 +94,43 @@ export type MapActivity = {
 export type MapProfile = {
   stack?: string | null;
   devLog?: Array<{ date: string; done?: string | null; next?: string | null }> | null;
+  /** The four public identity attributes, already filtered to the allowlist. */
+  identity?: Partial<Record<PublicIdentityAttr, string>> | null;
+  /** Goal rows for this project, in whatever order the query returned them. */
+  goals?: Array<{
+    title: string;
+    status?: string | null;
+    progress?: number | null;
+    targetDate?: string | null;
+    milestones?: Array<{ title: string; done?: boolean }> | null;
+  }> | null;
 };
+
+/**
+ * What a project owes a reader. Four attributes, a roadmap and a changelog —
+ * the same six everywhere, so a consumer never has to ask which surface calls
+ * it what.
+ *
+ * Null means nobody has written it. An empty array means the project has the
+ * surface and nothing on it yet. A consumer must render those differently:
+ * "not written" invites someone to write it, "nothing yet" does not.
+ */
+export type MapIdentity = {
+  problem: string | null;
+  solution: string | null;
+  mission: string | null;
+  vision: string | null;
+};
+
+export type MapRoadmapItem = {
+  title: string;
+  status: string | null;
+  progress: number | null;
+  targetDate: string | null;
+  milestones: string[];
+};
+
+export type MapChangelogEntry = { date: string; done: string };
 
 const OWN = new Set(["bitbaum", "-", ""]);
 
@@ -108,6 +155,66 @@ function solonUrl(row: RegisterRow): string | null {
 
 function repoUrl(row: RegisterRow): string | null {
   return row.repo ? `https://github.com/bitbaum/${row.repo}` : null;
+}
+
+/** Trimmed, or null. An attribute of whitespace is not an answer. */
+function prose(v: string | null | undefined): string | null {
+  const t = (v ?? "").trim();
+  return t === "" ? null : t;
+}
+
+/** The four public attributes, in reading order, never any other key. */
+export function publicIdentity(profile: MapProfile | undefined): MapIdentity {
+  const src = profile?.identity ?? {};
+  const out = {} as MapIdentity;
+  for (const key of PUBLIC_IDENTITY_ATTRS) out[key] = prose(src[key]);
+  return out;
+}
+
+/**
+ * A goal row as a roadmap item: title, how far along, when, and the milestone
+ * TITLES.
+ *
+ * `description` is deliberately dropped. Read in production on 2026-09-15, goal
+ * descriptions are internal engineering notes carrying acceptance criteria —
+ * "Acceptance: pushing main runs DB migrations", "HMAC entitlement webhook
+ * verified". A public roadmap is what we are working on and how far along, not
+ * the conditions under which an engineer may call it done. Publishing the
+ * column because it was in the row is how explanatory fields become public
+ * copy.
+ *
+ * Completed goals are kept: a roadmap that hides what shipped reads as though
+ * nothing ever does.
+ */
+export function publicRoadmap(profile: MapProfile | undefined): MapRoadmapItem[] {
+  return (profile?.goals ?? [])
+    .filter((g) => prose(g.title))
+    .map((g) => ({
+      title: g.title.trim(),
+      status: prose(g.status),
+      progress: typeof g.progress === "number" ? g.progress : null,
+      targetDate: g.targetDate ? g.targetDate.slice(0, 10) : null,
+      milestones: (g.milestones ?? []).map((m) => prose(m?.title)).filter((t): t is string => !!t),
+    }));
+}
+
+/**
+ * The dev log as a user-facing changelog: what was done, on which day.
+ *
+ * `next`, `tests`, `todos` and `health` are dropped. They are the operator's
+ * working notes about a project, not an entry in its changelog, and the map
+ * already publishes exactly one of them (`next`) as its own labelled field
+ * rather than smuggling it inside an entry.
+ *
+ * Newest first, and capped: a changelog is a front page, not an export. A
+ * consumer that wants everything has the project page.
+ */
+export function publicChangelog(profile: MapProfile | undefined, limit = 20): MapChangelogEntry[] {
+  return (profile?.devLog ?? [])
+    .filter((e) => e?.date && prose(e.done))
+    .map((e) => ({ date: e.date.slice(0, 10), done: (e.done ?? "").trim() }))
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, limit);
 }
 
 export function buildFleetMap(
@@ -140,6 +247,9 @@ export function buildFleetMap(
         orangecat: orangecatUrl(row),
         solon: solonUrl(row),
       },
+      identity: publicIdentity(profile),
+      roadmap: publicRoadmap(profile),
+      changelog: publicChangelog(profile),
       next: log?.next?.trim() || null,
       now: {
         openRuns: act?.openRuns ?? 0,
