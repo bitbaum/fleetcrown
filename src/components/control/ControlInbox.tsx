@@ -29,6 +29,7 @@ import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import type { ProjectFeedbackSummary } from "@/db/queries/site-feedback";
 import type { WidgetCoverageItem } from "@/db/queries/widget-tokens";
+import { FAILURE_REMEDY, REMEDY_LABEL } from "@/lib/failure-remedy";
 
 /**
  * One inbox for every small thing that wants doing.
@@ -299,7 +300,9 @@ function WidgetCoverage({
           ok: true,
           message:
             body.nextStep ??
-            `Queued for ${projectName}. If Attention shows Retry, the agent never started.`,
+            // Same correction as the terminal's empty state: for "the agent
+            // never started" Attention offers START_SESSION, never Retry.
+            `Queued for ${projectName}. If the agent never started, Attention offers “${REMEDY_LABEL[FAILURE_REMEDY.START_SESSION]}”.`,
         },
       }));
       onChanged();

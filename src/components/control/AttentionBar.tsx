@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { AlertTriangle, RotateCcw, Play, X } from "lucide-react";
-import { remedyForFailure, FAILURE_REMEDY } from "@/lib/failure-remedy";
+import { remedyForFailure, FAILURE_REMEDY, REMEDY_LABEL } from "@/lib/failure-remedy";
 import type { AttentionItem } from "./control-presenter";
 import type { FailedCommand } from "@/lib/control-types";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
@@ -192,7 +192,7 @@ export function AttentionBar({
                   title={`${f.tab} has no terminal session — start one, then this command can run`}
                 >
                   <Play className="h-3 w-3" />
-                  Start session
+                  {REMEDY_LABEL[FAILURE_REMEDY.START_SESSION]}
                 </button>
               )}
               {remedy === FAILURE_REMEDY.RETRY && (
@@ -203,7 +203,7 @@ export function AttentionBar({
                   aria-label="Retry command"
                 >
                   <RotateCcw className="h-3 w-3" />
-                  {retrying.has(f.id) ? "Retrying…" : "Retry"}
+                  {retrying.has(f.id) ? "Retrying…" : REMEDY_LABEL[FAILURE_REMEDY.RETRY]}
                 </button>
               )}
               <button

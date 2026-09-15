@@ -16,6 +16,7 @@ import { rememberFleetProject } from "@/lib/fleet-context";
 import { resolveTabAttachment, type PtyGeometry } from "@/lib/terminal-viewport";
 import type { BuilderChannel } from "@/lib/event-stream-types";
 import { resolveTerminalSource } from "@/lib/terminal-deep-link";
+import { FAILURE_REMEDY, REMEDY_LABEL } from "@/lib/failure-remedy";
 import {
   TERMINAL_MODE_STORAGE_KEY,
   type TerminalInputMode,
@@ -534,7 +535,13 @@ export function TerminalSurface({
       // dead-end — say so plainly instead of a generic empty cloud.
       const tabHint =
         initialTab && !offline && !gatedMessage
-          ? `No live agent session for “${initialTab}”. If you just clicked Implement or Install, open Control — Attention shows Retry when the prompt never started. Terminal only shows sessions that are actually running.`
+          ? // Name the button Attention ACTUALLY shows for this case. This branch
+            // is the no-running-agent case by definition, which maps to
+            // START_SESSION — Retry is deliberately not offered there, because
+            // repeating a command against an absent target fails identically
+            // forever. The old copy said "Retry", so it sent the reader to
+            // Control to hunt for a button that is not drawn.
+            `No live agent session for “${initialTab}”. If you just clicked Implement or Install, open Control — Attention offers “${REMEDY_LABEL[FAILURE_REMEDY.START_SESSION]}” when the prompt never started. Terminal only shows sessions that are actually running.`
           : null;
       const hint = gatedMessage ?? (offline ? copy.offlineHint : (tabHint ?? copy.emptyHint));
       const controlHref = initialTab
