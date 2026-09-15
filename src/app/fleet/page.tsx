@@ -380,12 +380,13 @@ function Row({
   orangecatLive: ReadonlySet<string>;
 }) {
   const projectHref = r.loki && canOpenProjects ? `/projects/${r.loki.id}` : null;
+  const publicProfileHref = `/fleet/${encodeURIComponent(r.slug)}`;
   return (
     // id = slug, so any single project is linkable: /fleet#causius.
     <li className="ui-public-fleet-row" id={r.slug}>
       <div className="min-w-0">
-        {projectHref ? (
-          <Link href={projectHref} className="ui-public-fleet-name">
+        {r.loki ? (
+          <Link href={publicProfileHref} className="ui-public-fleet-name">
             {r.name ?? r.slug}
           </Link>
         ) : (
