@@ -292,6 +292,7 @@ export async function generateProposals(
     // requests ~5.2k tokens against Groq's 8000 TPM per-model cap, so it fits;
     // the judges run on different models and so draw on different buckets.
     raw = await callGroqText(user, {
+      feature: "frontier-propose",
       systemPrompt: GENERATE_SYSTEM,
       maxTokens: 4000,
       temperature: 0.4,
@@ -409,6 +410,7 @@ async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<JudgeRun
   let raw: string;
   try {
     raw = await callGroqText(user, {
+      feature: "frontier-judge",
       systemPrompt: CRITIQUE_SYSTEM,
       maxTokens: judge.maxTokens,
       temperature: 0.1,

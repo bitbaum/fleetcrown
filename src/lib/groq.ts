@@ -26,6 +26,8 @@ import {
 } from "@/lib/agent/llm";
 import { readSseChunks } from "@/lib/agent/sse-stream";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
+import { recordVendorQuota, recordRefusal } from "@/lib/ai/record-quota";
+import { retryAfterSeconds as groqRetryAfterSeconds } from "@bitbaum/ai-kit";
 
 /**
  * The default chat model for every direct Groq call in this app.
@@ -81,6 +83,16 @@ const GROQ_AUDIO_URL = `${GROQ_BASE_URL}/audio/transcriptions`;
 
 type GroqOptions = {
   /**
+   * WHO is asking, as a stable slug the capacity page can show a person:
+   * "activity-digest", "form-assist", "calendar-extract".
+   *
+   * REQUIRED, with no default, and that is the entire point. Fifteen callers
+   * reached the vendor through this module without the ledger knowing any of
+   * them existed; a default here would let the sixteenth do the same. A new
+   * caller must now name itself or fail the build.
+   */
+  feature: string;
+  /**
    * Present when an operator is watching: stream the answer instead of
    * buffering it. A link that fails after emitting calls `reset` so the next
    * link's answer replaces what was shown rather than continuing it.
@@ -122,14 +134,31 @@ export type TextCompletion = {
   provider: string;
   /** Links that failed before this one answered. Empty on a first-try success. */
   attempts: { model: string; error: string }[];
+  /** The vendor's OWN token count. 0 means it did not say, never "free". */
+  tokens: number;
 };
+
+/**
+ * Write one call to the usage ledger.
+ *
+ * The database is imported LAZILY for the same reason `record-quota.ts` does
+ * it: `@/db` throws at MODULE INIT with no connection string, and this module
+ * is imported by tests that touch no database at all. Fire-and-forget, and
+ * every path caught — a ledger that cannot be written is a stale page, which is
+ * survivable; an exception here would fail an answer, which is not.
+ */
+function recordUsage(provider: string, model: string, feature: string, tokens: number): void {
+  void import("@/db/queries/ai-usage")
+    .then((m) => m.recordUsage({ provider, model, feature, tokens }))
+    .catch(() => undefined);
+}
 
 async function callOneLink(
   link: ChatLink,
   prompt: string,
   o: Required<Pick<GroqOptions, "maxTokens" | "temperature" | "timeoutMs" | "reasoningEffort">> &
     Pick<GroqOptions, "systemPrompt" | "sink">,
-): Promise<string> {
+): Promise<{ text: string; tokens: number }> {
   const key = process.env[link.provider.keyEnv];
   if (!key) throw new Error(`${link.provider.keyEnv} not set`);
 
@@ -151,14 +180,28 @@ async function callOneLink(
     signal: AbortSignal.timeout(o.timeoutMs),
   });
 
+  // Learn what is left at this vendor from the answer we already paid for.
+  //
+  // This one line is why fifteen features were invisible. They all reach the
+  // vendor through here, and this helper read the body and threw the headers
+  // away — so every digest, brief and form-fill drew on the same Groq pool the
+  // capacity page was drawing, and the page never saw them. The tool loop's own
+  // seam has recorded this since the meter existed; this path never did.
+  //
+  // Success AND refusal both disclose it, and the refusal is the more valuable
+  // reading: it corrects a counter that had drifted optimistic.
+  recordVendorQuota(res.headers, link);
+
   // Keep the body: a 429 says WHICH limit was hit (tokens-per-minute vs
   // per-day) and how long to wait. Without it a rate-limited caller cannot tell
   // "retry in 12s" from "you are out for the day".
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    recordRefusal(link, body, groqRetryAfterSeconds(body), "requests");
     throw new Error(`${link.provider.id} ${res.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
   }
   let text: string;
+  let tokens = 0;
   if (o.sink) {
     // Streamed: forward prose through the same gate the tool loop uses, so a
     // model that narrates a tool call cannot leak the plumbing here either.
@@ -179,14 +222,20 @@ async function callOneLink(
     gate.end();
     text = normaliseCitations(stripReasoning(acc)).trim();
   } else {
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+      usage?: { total_tokens?: number };
+    };
     text = normaliseCitations(stripReasoning(data?.choices?.[0]?.message?.content ?? "")).trim();
+    // The vendor's OWN count, never an estimate. Absent on some links, which is
+    // why the ledger reads 0 as "did not say" rather than "cost nothing".
+    tokens = Number(data?.usage?.total_tokens) || 0;
   }
   // A 200 with empty content is a failure for every caller here (they all parse
   // the text). Treating it as success would spend the fallback budget on
   // nothing and hand the caller an empty string to misparse.
   if (!text) throw new Error(`${link.provider.id} returned empty content`);
-  return text;
+  return { text, tokens };
 }
 
 /**
@@ -198,7 +247,7 @@ async function callOneLink(
  */
 export async function callTextDetailed(
   prompt: string,
-  options: GroqOptions = {},
+  options: GroqOptions,
 ): Promise<TextCompletion> {
   const {
     maxTokens = 200,
@@ -209,6 +258,7 @@ export async function callTextDetailed(
     reasoningEffort = "low",
     fallback = true,
     sink,
+    feature,
   } = options;
 
   const chain = chainFrom(model);
@@ -249,7 +299,7 @@ export async function callTextDetailed(
             reset: sink.reset,
           }
         : undefined;
-      const text = await callOneLink(link, prompt, {
+      const answered = await callOneLink(link, prompt, {
         maxTokens,
         temperature,
         timeoutMs,
@@ -260,6 +310,11 @@ export async function callTextDetailed(
         if (emitted) sink?.reset();
         throw e;
       });
+      const text = answered.text;
+      // What it cost, and who asked. Never awaited and never able to throw:
+      // telemetry must not add latency to an answer someone is waiting for, nor
+      // turn a good answer into a failed one.
+      recordUsage(link.provider.id, link.model, feature, answered.tokens);
       // A fallback that fires SILENTLY hides the very fault it is compensating
       // for: the feature still works, so nothing looks wrong, while the primary
       // is dead. That is how the 2026-08-18 rot survived eight days. Real
@@ -274,7 +329,13 @@ export async function callTextDetailed(
       // still a success for the caller, and flagging it "degraded" here would
       // report the fallback doing its job as if it were a problem.
       recordAIHealthSuccess();
-      return { text, model: link.model, provider: link.provider.id, attempts };
+      return {
+        text,
+        model: link.model,
+        provider: link.provider.id,
+        attempts,
+        tokens: answered.tokens,
+      };
     } catch (err) {
       attempts.push({ model: link.model, error: err instanceof Error ? err.message : String(err) });
     }
@@ -292,7 +353,7 @@ export async function callTextDetailed(
  * Call the model chain and return the completion text.
  * Throws if every link fails, no key is set, or the timeouts fire.
  */
-export async function callGroqText(prompt: string, options: GroqOptions = {}): Promise<string> {
+export async function callGroqText(prompt: string, options: GroqOptions): Promise<string> {
   return (await callTextDetailed(prompt, options)).text;
 }
 
@@ -310,6 +371,20 @@ export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): 
     headers: { Authorization: `Bearer ${key}` },
     body: form,
     signal: AbortSignal.timeout(HTTP_TIMEOUT_LONG_MS),
+  });
+
+  // transcribe-quota: Whisper is Groq-direct with no second vendor, but it
+  // draws on the same account. An unmetered transport is how a pool empties
+  // for reasons the page cannot explain.
+  recordVendorQuota(res.headers, {
+    provider: {
+      id: "groq",
+      baseUrl: GROQ_BASE_URL,
+      keyEnv: "GROQ_API_KEY",
+      models: [GROQ_WHISPER_MODEL],
+      dailyTokens: 0,
+    },
+    model: GROQ_WHISPER_MODEL,
   });
 
   if (!res.ok) {

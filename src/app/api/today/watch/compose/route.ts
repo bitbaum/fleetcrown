@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const composed = await callGroqText(prompt, {
+      feature: "today-watch",
       systemPrompt: SYSTEM_PROMPT,
       maxTokens: 120,
       temperature: 0.3,

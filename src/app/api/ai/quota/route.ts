@@ -1,6 +1,7 @@
 import { jsonOk, jsonError } from "@/lib/api/route-helpers";
 import { getSessionUserId } from "@/lib/session";
 import { listQuota } from "@/db/queries/provider-quota";
+import { usageByFeature } from "@/db/queries/ai-usage";
 import { usableChatChain } from "@/config/chat-models";
 import { isGatewayConfigured } from "@/lib/openclaw-gateway";
 import {
@@ -29,9 +30,13 @@ export async function GET() {
   if (!userId) return jsonError("Unauthorized", 401);
 
   const now = Date.now();
-  const [rows, chain] = await Promise.all([
+  const [rows, chain, spend] = await Promise.all([
     listQuota().catch(() => []),
     Promise.resolve(usableChatChain()),
+    // What today went ON. A limit with no spend beside it tells the operator
+    // how much room is left but never where the room went — which is the half
+    // they can actually act on.
+    usageByFeature().catch(() => []),
   ]);
 
   // Chain order is fallback order, so "what serves this next" is simply the
@@ -111,5 +116,15 @@ export async function GET() {
     providers,
     // So the page can say WHY a vendor is absent from the chain entirely.
     configured: chain.map((l) => ({ provider: l.provider.id, model: l.model })),
+    /**
+     * Today's tokens by feature, heaviest first.
+     *
+     * EMPTY IS A REAL ANSWER and must not be drawn as "nothing was spent": the
+     * ledger starts at the deploy that began recording, so an empty list means
+     * "nothing recorded yet today", which is the same three-state problem the
+     * quota rows already solve. The page says which it is.
+     */
+    spend,
+    spendTotal: spend.reduce((n, r) => n + r.tokens, 0),
   });
 }

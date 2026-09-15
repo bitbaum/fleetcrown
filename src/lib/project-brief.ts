@@ -138,6 +138,7 @@ export async function extractProjectProfile(
   for (let attempt = 0; ; attempt++) {
     try {
       raw = await callGroqText(prompt, {
+        feature: "project-brief",
         systemPrompt: SYSTEM_PROMPT,
         maxTokens: 900,
         temperature: 0.2,
@@ -184,6 +185,7 @@ export async function extractReachProfile(
 ): Promise<ExtractedProfile> {
   const prompt = `Project name: ${projectName}\n\nSource text:\n${sourceText.slice(0, 12_000)}`;
   const raw = await callGroqText(prompt, {
+    feature: "project-brief",
     systemPrompt: REACH_SYSTEM_PROMPT,
     maxTokens: 300,
     temperature: 0.2,
@@ -272,6 +274,7 @@ export async function reconcileProfile(
   for (let attempt = 0; ; attempt++) {
     try {
       raw = await callGroqText(prompt, {
+        feature: "project-brief",
         systemPrompt: RECONCILE_SYSTEM,
         maxTokens: 1600,
         temperature: 0.2,
@@ -299,6 +302,7 @@ export async function extractRoadmap(projectName: string, sourceText: string): P
   for (let attempt = 0; ; attempt++) {
     try {
       raw = await callGroqText(prompt, {
+        feature: "project-brief",
         systemPrompt: ROADMAP_SYSTEM,
         maxTokens: 1200,
         temperature: 0.2,

@@ -22,6 +22,7 @@ export const POST = createFormAssistHandler({
 
   complete: ({ system, prompt, maxTokens, temperature }) =>
     callGroqText(prompt, {
+      feature: "form-assist",
       systemPrompt: system,
       maxTokens,
       temperature,

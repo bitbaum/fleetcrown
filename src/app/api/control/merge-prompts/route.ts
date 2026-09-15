@@ -19,6 +19,7 @@ type AgentResult = {
 // Set GROQ_API_KEY in .env.local to enable. Falls back to openclaw agent.
 async function mergeViaGroq(message: string): Promise<string> {
   return callGroqText(message, {
+    feature: "merge-prompts",
     maxTokens: 500,
     temperature: 0.3,
     timeoutMs: HTTP_TIMEOUT_LONG_MS,

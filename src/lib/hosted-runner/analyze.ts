@@ -116,6 +116,7 @@ export async function analyzeRepo(input: {
     ].join("\n");
 
     const report = await callGroqText(user, {
+      feature: "hosted-runner-analyze",
       systemPrompt: SYSTEM,
       maxTokens: 1200,
       temperature: 0.3,

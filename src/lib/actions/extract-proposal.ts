@@ -121,6 +121,7 @@ export async function extractActionProposal(
   if (!process.env.GROQ_API_KEY) return null; // extraction needs Groq; silent no-op
 
   const raw = await callGroqText(`Current time: ${nowISO}\n\nMessage:\n${text}`, {
+    feature: "proposal-extract",
     systemPrompt: SYSTEM_PROMPT,
     model: GROQ_FAST_MODEL,
     maxTokens: 300,

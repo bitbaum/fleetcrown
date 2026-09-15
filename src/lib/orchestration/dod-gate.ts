@@ -115,6 +115,7 @@ export async function verifyDefinitionOfDone(
   let raw: string;
   try {
     raw = await callGroqText(user, {
+      feature: "dod-gate",
       systemPrompt: SYSTEM,
       maxTokens: 400,
       temperature: 0.1,

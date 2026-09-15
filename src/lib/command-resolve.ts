@@ -166,7 +166,13 @@ export async function resolveCommand(
   try {
     const out = await callGroqText(
       `Projects: ${JSON.stringify(projects)}\nCurrently selected project: ${selectedProject ?? "none"}\nInput: ${text}`,
-      { systemPrompt: SYSTEM, maxTokens: 220, temperature: 0, timeoutMs: 8000 },
+      {
+        feature: "command-resolve",
+        systemPrompt: SYSTEM,
+        maxTokens: 220,
+        temperature: 0,
+        timeoutMs: 8000,
+      },
     );
     const raw = JSON.parse(out.replace(/^```(?:json)?\s*|\s*```$/g, "").trim()) as Record<
       string,

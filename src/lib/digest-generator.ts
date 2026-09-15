@@ -97,6 +97,7 @@ export async function generateDigest({
     previousCount: digest.previousCount,
   });
   const markdown = await callGroqText(userPrompt, {
+    feature: "activity-digest",
     systemPrompt: DIGEST_SYSTEM_PROMPT,
     maxTokens: 900,
     temperature: 0.3,

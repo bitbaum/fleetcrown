@@ -125,6 +125,7 @@ export async function generateBusinessPlan(
   for (let attempt = 0; ; attempt++) {
     try {
       raw = await callGroqText(context.slice(0, 14_000), {
+        feature: "business-plan",
         systemPrompt: SYSTEM_PROMPT,
         maxTokens: 2200,
         temperature: 0.3,
