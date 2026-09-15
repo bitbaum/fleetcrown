@@ -3,6 +3,11 @@ import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
 import { getLatestFrontierDigest } from "@/db/queries/frontier";
 import { FRONTIER_CATEGORY_LABEL, type FrontierItem } from "@/lib/frontier/types";
+import { longDate } from "@/lib/dates";
+
+/** The frontier page dates every digest with its weekday — a daily feed reads
+ *  as a day, not as a timestamp. */
+const longDateWithWeekday = (ymd: string) => longDate(ymd, { weekday: true });
 
 export const metadata = {
   title: "Frontier — daily AI & robotics digest",
@@ -12,17 +17,6 @@ export const metadata = {
 
 // The digest is rebuilt by a daily cron; always read the freshest row.
 export const dynamic = "force-dynamic";
-
-function formatDate(ymd: string): string {
-  // ymd is "YYYY-MM-DD" from a date column; pin to UTC noon to avoid TZ slips.
-  return new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 function FrontierMeta({ item }: { item: FrontierItem }) {
   return (
@@ -66,7 +60,9 @@ export default async function FrontierPage() {
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">
             <span className="ui-public-doc-badge">FRONTIER</span>
-            {digest && <span className="ui-public-doc-meta">{formatDate(digest.digestDate)}</span>}
+            {digest && (
+              <span className="ui-public-doc-meta">{longDateWithWeekday(digest.digestDate)}</span>
+            )}
           </div>
           <h1 className="ui-public-doc-title">The Frontier</h1>
           <p className="ui-public-doc-subtitle">

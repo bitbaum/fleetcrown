@@ -27,6 +27,7 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { RESERVED_SITE_SLUGS, SLUG_RE } from "@/lib/site-slug";
 
 const run = promisify(execFile);
 
@@ -60,62 +61,6 @@ export type NewSiteRequest = {
 };
 
 /**
- * Labels that must never become a site.
- *
- * new-site.sh has its own copy and REFUSES on it, and that script stays the
- * authority — this list exists so a bad request dies before it reaches a
- * process, not instead of the script's check. Two independent refusals of the
- * same class is defence in depth; if they ever disagree, the script wins and
- * this list is the one that is wrong.
- */
-const RESERVED = new Set([
-  "www",
-  "api",
-  "app",
-  "admin",
-  "support",
-  "security",
-  "billing",
-  "pay",
-  "wallet",
-  "login",
-  "auth",
-  "account",
-  "mail",
-  "smtp",
-  "imap",
-  "ns1",
-  "ns2",
-  "mx",
-  "cdn",
-  "static",
-  "assets",
-  "vpn",
-  "db",
-  "status",
-  "staging",
-  "dev",
-  "test",
-  "preview",
-  "bridge",
-  "loki",
-  "orangecat",
-  "supabase",
-  "solon",
-  "evig",
-  "revampit",
-  "root",
-  "system",
-]);
-
-/**
- * A slug becomes a DNS label, a TLS subject, a directory and a systemd unit.
- * Same grammar new-site.sh enforces: lowercase alphanumerics and hyphens, never
- * leading or trailing a hyphen, 63 characters max (the DNS label limit).
- */
-const SLUG_RE = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
-
-/**
  * The title is the only free-ish field — it reaches the scaffold as a
  * substituted string and ends up in the page and metadata. It never reaches a
  * shell (argument vector, see below), so the danger is not injection but
@@ -140,7 +85,7 @@ export function validateNewSiteRequest(input: unknown): ValidationResult {
       reason: "slug must be lowercase letters, digits and hyphens, not starting or ending with one",
     };
   }
-  if (RESERVED.has(slug)) {
+  if (RESERVED_SITE_SLUGS.has(slug)) {
     return {
       ok: false,
       reason: `slug "${slug}" is reserved (infrastructure or impersonation risk)`,

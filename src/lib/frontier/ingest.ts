@@ -8,6 +8,7 @@
 import { FRONTIER_SOURCES, HN_LOOKBACK_SECONDS, type FrontierSource } from "./sources";
 import type { FrontierCategory } from "./types";
 import { APP_URL } from "@/config/brand";
+import { decodeEntities } from "@/lib/escape-html";
 
 export type FrontierCandidate = {
   title: string;
@@ -21,18 +22,6 @@ export type FrontierCandidate = {
 };
 
 const FETCH_TIMEOUT_MS = 12_000;
-
-function decodeEntities(s: string): string {
-  return s
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&");
-}
 
 function stripTags(s: string): string {
   return decodeEntities(s.replace(/<[^>]+>/g, " "))

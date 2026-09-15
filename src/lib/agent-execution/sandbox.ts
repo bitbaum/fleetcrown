@@ -13,19 +13,8 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type {
-  AgentEvent,
-  AgentLifecycle,
-  EventListener,
-  Executor,
-  Unsubscribe,
-  WorkspaceHandle,
-  WorkspaceId,
-  WorkspaceSpec,
-} from "./types";
-import { MAX_BUFFERED_EVENTS } from "./local-pty";
-
-const IDLE_MS = 1500;
+import type { WorkspaceId, WorkspaceSpec } from "./types";
+import { PtyExecutor, type PtyWorkspaceState } from "./pty-executor";
 
 export type SandboxNetwork = "none" | "bridge";
 export type SandboxUser = "current" | "root";
@@ -44,15 +33,8 @@ export interface SandboxExecutorConfig {
   extraRunArgs: string[];
 }
 
-interface WorkspaceState {
-  handle: WorkspaceHandle;
-  pty: IPty | null;
-  containerName: string;
-  buffer: AgentEvent[];
-  seq: number;
-  listeners: Set<EventListener>;
-  idleTimer: ReturnType<typeof setTimeout> | null;
-}
+/** All this backend remembers beyond the shared PTY state. */
+type SandboxMeta = { containerName: string };
 
 function envValue(name: string, fallback: string): string {
   const value = process.env[name]?.trim();
@@ -140,14 +122,12 @@ export function buildDockerRunArgs(
   ];
 }
 
-export class SandboxExecutor implements Executor {
-  private workspaces = new Map<WorkspaceId, WorkspaceState>();
+export class SandboxExecutor extends PtyExecutor<SandboxMeta> {
+  constructor(private readonly config = resolveSandboxConfig()) {
+    super();
+  }
 
-  constructor(private readonly config = resolveSandboxConfig()) {}
-
-  async provision(spec: WorkspaceSpec): Promise<WorkspaceHandle> {
-    const existing = this.workspaces.get(spec.id);
-    if (existing && existing.handle.status !== "exited") return existing.handle;
+  protected async launch(spec: WorkspaceSpec): Promise<{ pty: IPty; meta: SandboxMeta }> {
     if (!fs.existsSync(spec.cwd)) throw new Error(`Sandbox cwd does not exist: ${spec.cwd}`);
 
     const containerName = sandboxContainerName(spec.id);
@@ -160,129 +140,24 @@ export class SandboxExecutor implements Executor {
       env: { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? os.homedir() },
     });
 
-    const state: WorkspaceState = {
-      handle: { id: spec.id, status: "starting", startedAt: Date.now() },
-      pty,
-      containerName,
-      buffer: [],
-      seq: 0,
-      listeners: new Set(),
-      idleTimer: null,
-    };
-    this.workspaces.set(spec.id, state);
-
-    pty.onData((data) => {
-      this.setStatus(state, "running");
-      this.emit(state, { kind: "output", data });
-      this.armIdle(state);
-    });
-
-    pty.onExit(({ exitCode }) => {
-      if (state.idleTimer) clearTimeout(state.idleTimer);
-      state.idleTimer = null;
-      state.pty = null;
-      state.handle = { ...state.handle, status: "exited" };
-      this.emit(state, { kind: "status", status: "exited" });
-      this.emit(state, { kind: "exit", exitCode });
-    });
-
-    return state.handle;
+    return { pty, meta: { containerName } };
   }
 
-  write(id: WorkspaceId, data: string): void {
-    const state = this.workspaces.get(id);
-    if (state?.pty) state.pty.write(data);
-  }
-
-  resize(id: WorkspaceId, cols: number, rows: number): void {
-    const state = this.workspaces.get(id);
-    if (state?.pty) {
-      try {
-        state.pty.resize(cols, rows);
-      } catch {
-        /* pty may have just exited */
-      }
-    }
-  }
-
-  subscribe(id: WorkspaceId, sinceSeq: number, listener: EventListener): Unsubscribe {
-    const state = this.workspaces.get(id);
-    if (!state) return () => {};
-    for (const event of state.buffer) {
-      if (event.seq > sinceSeq) listener(event);
-    }
-    state.listeners.add(listener);
-    return () => {
-      state.listeners.delete(listener);
-    };
-  }
-
-  get(id: WorkspaceId): WorkspaceHandle | null {
-    return this.workspaces.get(id)?.handle ?? null;
-  }
-
-  list(): WorkspaceHandle[] {
-    return [...this.workspaces.values()].map((s) => s.handle);
-  }
-
-  async terminate(id: WorkspaceId): Promise<void> {
-    const state = this.workspaces.get(id);
-    if (!state) return;
-    if (state.idleTimer) clearTimeout(state.idleTimer);
-    try {
-      state.pty?.kill();
-    } catch {
-      /* already dead */
-    }
-    state.pty = null;
-    if (state.handle.status !== "exited") {
-      state.handle = { ...state.handle, status: "exited" };
-      this.emit(state, { kind: "status", status: "exited" });
-    }
-    // Best effort: node-pty kill usually stops docker run; this catches a
-    // detached container if Docker needed an extra nudge.
+  /** Best effort: node-pty kill usually stops docker run; this catches a
+   *  detached container if Docker needed an extra nudge. */
+  protected async afterTerminate(state: PtyWorkspaceState<SandboxMeta>): Promise<void> {
     try {
       const { execFile } = await import("node:child_process");
       await new Promise<void>((resolve) => {
-        execFile(this.config.runtime, ["rm", "-f", state.containerName], { timeout: 5000 }, () =>
-          resolve(),
+        execFile(
+          this.config.runtime,
+          ["rm", "-f", state.meta.containerName],
+          { timeout: 5000 },
+          () => resolve(),
         );
       });
     } catch {
       /* docker unavailable or already removed */
     }
-  }
-
-  private emit(
-    state: WorkspaceState,
-    partial: Omit<AgentEvent, "workspaceId" | "seq" | "at">,
-  ): void {
-    const event: AgentEvent = {
-      workspaceId: state.handle.id,
-      seq: ++state.seq,
-      at: Date.now(),
-      ...partial,
-    };
-    state.buffer.push(event);
-    if (state.buffer.length > MAX_BUFFERED_EVENTS)
-      state.buffer.splice(0, state.buffer.length - MAX_BUFFERED_EVENTS);
-    for (const listener of state.listeners) {
-      try {
-        listener(event);
-      } catch {
-        /* listener isolation */
-      }
-    }
-  }
-
-  private setStatus(state: WorkspaceState, status: AgentLifecycle): void {
-    if (state.handle.status === status || state.handle.status === "exited") return;
-    state.handle = { ...state.handle, status };
-    this.emit(state, { kind: "status", status });
-  }
-
-  private armIdle(state: WorkspaceState): void {
-    if (state.idleTimer) clearTimeout(state.idleTimer);
-    state.idleTimer = setTimeout(() => this.setStatus(state, "idle"), IDLE_MS);
   }
 }

@@ -10,8 +10,7 @@ import { APP_NAME } from "@/config/brand";
 import {
   AuthShell,
   AuthCard,
-  AuthField,
-  AuthInput,
+  CreateAccountFields,
   AuthSubmitButton,
   AuthIconBadge,
   AuthHeading,
@@ -74,38 +73,15 @@ export default function SetupPage() {
 
       <AuthCard>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <AuthField label="Your name">
-            <AuthInput
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Alex"
-              autoComplete="name"
-              required
-            />
-          </AuthField>
-
-          <AuthField label="Password">
-            <AuthInput
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              required
-            />
-          </AuthField>
-
-          <AuthField label="Confirm password">
-            <AuthInput
-              type="password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Repeat password"
-              autoComplete="new-password"
-              required
-            />
-          </AuthField>
+          <CreateAccountFields
+            name={name}
+            onName={setName}
+            namePlaceholder="e.g. Alex"
+            password={password}
+            onPassword={setPassword}
+            confirm={confirm}
+            onConfirm={setConfirm}
+          />
 
           {error && <p className="ui-error">{error}</p>}
 

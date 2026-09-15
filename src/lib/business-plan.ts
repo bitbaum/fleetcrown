@@ -7,6 +7,7 @@ import { fetchAttributesByEntityIds, upsertEntityAttribute } from "@/db/queries/
 import { getProjectPromptActivity } from "@/db/queries/prompt-history";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
+import { parseModelJson } from "@/lib/ai/model-json";
 
 /**
  * The living business plan — automatic business creation and development.
@@ -49,17 +50,6 @@ The "plan" markdown should be tight and skimmable (max ~600 words) with these se
 The "actions" array is the point: 4-6 prioritized, immediately executable steps that advance the BUSINESS, not just the code — e.g. drafting positioning copy, a pricing page, pilot-customer outreach, a partnership one-pager, an analytics check. Each "prompt" must be a self-contained instruction an AI agent can execute inside the project's workspace (it has the repo and can write code, docs, and content). Reference concrete file paths or pages when sensible.
 
 Iterate, don't reset: when a previous plan is provided, keep what still holds, adjust what changed (use recent activity as evidence of progress), and never repeat actions that recent activity shows are already done. Ground every claim in the provided context plus common market knowledge — concrete, zero hype.`;
-
-function parseModelJson(raw: string): unknown {
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/```\s*$/, "")
-    .trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) throw new Error("model returned no JSON object");
-  return JSON.parse(cleaned.slice(start, end + 1));
-}
 
 /** Assemble the model context: profile + siblings + recent activity + previous plan. */
 async function buildContext(userId: string, entityId: string): Promise<string | null> {

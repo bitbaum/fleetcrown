@@ -165,3 +165,27 @@ export function compactDurationHours(hours: number): string {
   if (hours < 48) return `${Math.round(hours)}h`;
   return `${Math.round(hours / 24)}d`;
 }
+
+/**
+ * "September 15, 2026", or "Monday, September 15, 2026" with `weekday`.
+ *
+ * Two pages each had a local `formatDate` — same name, different output, which
+ * is worse than two names would have been: reading one told you nothing about
+ * the other. They differ only in the weekday and in what they are given, so
+ * this takes both.
+ *
+ * A bare "YYYY-MM-DD" (a date column) is pinned to UTC noon and formatted in
+ * UTC. Without that, a date-only string parses as UTC midnight and renders as
+ * the previous day for every reader west of Greenwich — the date column says
+ * one day and the page says another.
+ */
+export function longDate(value: string, opts: { weekday?: boolean } = {}): string {
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  return new Date(dateOnly ? `${value}T12:00:00Z` : value).toLocaleDateString("en-US", {
+    ...(opts.weekday ? { weekday: "long" as const } : {}),
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    ...(dateOnly ? { timeZone: "UTC" } : {}),
+  });
+}

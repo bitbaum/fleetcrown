@@ -16,6 +16,7 @@
 
 import { callGroqText } from "@/lib/groq";
 import { stripReasoning } from "@/lib/agent/llm";
+import { safeParseModelJson } from "@/lib/ai/model-json";
 import type { FrontierItem } from "./types";
 
 // Short, stable grounding so proposals stay on-target for what Loki is.
@@ -80,37 +81,12 @@ Score each proposal 0-100. Be harsh: vague, derivative, or me-too proposals scor
 
 Return STRICT JSON only: {"scores":[{"index":<number>,"score":<0-100>}]}`;
 
-// Pull the first balanced {...} object out of a (possibly fenced) model reply.
-function extractJson(raw: string): string | null {
-  const text = stripReasoning(raw);
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const body = fenced ? fenced[1] : text;
-  const start = body.indexOf("{");
-  if (start === -1) return null;
-  let depth = 0;
-  for (let i = start; i < body.length; i++) {
-    if (body[i] === "{") depth++;
-    else if (body[i] === "}" && --depth === 0) return body.slice(start, i + 1);
-  }
-  return null;
-}
-
-function safeParse<T>(text: string): T | null {
-  const json = extractJson(text);
-  if (!json) return null;
-  try {
-    return JSON.parse(json) as T;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Recover the proposals that DID finish out of a reply that stopped mid-object.
  *
  * No token budget can be guaranteed sufficient: the model decides how long a
  * rationale is, so a big enough answer will always be able to run off the end.
- * When it does, `extractJson`'s balanced-brace scan finds no closing brace for
+ * When it does, `extractJson`'s balanced-brace scan (lib/ai/model-json) finds no closing brace for
  * the top-level object and returns null — throwing away two complete proposals
  * because a third was cut in half. Observed in prod at maxTokens 3000, on a
  * reply whose first proposal was perfectly well-formed:
@@ -312,7 +288,7 @@ export async function generateProposals(
   // A well-formed reply parses whole. One that ran out of tokens mid-object
   // still has complete proposals in it, and throwing away two because a third
   // was cut in half is a worse answer than the model gave us.
-  const parsed = safeParse<{ proposals?: unknown }>(raw);
+  const parsed = safeParseModelJson<{ proposals?: unknown }>(raw);
   let truncated = false;
   let list: unknown[];
   if (parsed) {
@@ -429,7 +405,7 @@ async function runJudge(drafts: DraftProposal[], judge: Judge): Promise<JudgeRun
   } catch (err) {
     return { scores: byIndex, error: err instanceof Error ? err.message : String(err) };
   }
-  const parsed = safeParse<{ scores?: Array<{ index?: unknown; score?: unknown }> }>(raw);
+  const parsed = safeParseModelJson<{ scores?: Array<{ index?: unknown; score?: unknown }> }>(raw);
   for (const s of Array.isArray(parsed?.scores) ? parsed!.scores : []) {
     const idx = Number(s?.index);
     const sc = Number(s?.score);

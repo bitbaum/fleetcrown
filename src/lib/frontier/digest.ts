@@ -8,6 +8,7 @@
 // deterministic top-N (by score) if the model errors or returns junk.
 
 import { callTextDetailed, GROQ_FAST_MODEL } from "@/lib/groq";
+import { safeParseModelJson } from "@/lib/ai/model-json";
 import type { FrontierCandidate } from "./ingest";
 import type { FrontierItem } from "./types";
 
@@ -72,21 +73,6 @@ function buildUserPrompt(candidates: FrontierCandidate[]): string {
 
 const isArxiv = (source: string): boolean => source.startsWith("arXiv");
 
-// Pull the first balanced {...} object out of a model response that may be
-// fenced or have stray prose around it.
-function extractJson(text: string): string | null {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const body = fenced ? fenced[1] : text;
-  const start = body.indexOf("{");
-  if (start === -1) return null;
-  let depth = 0;
-  for (let i = start; i < body.length; i++) {
-    if (body[i] === "{") depth++;
-    else if (body[i] === "}" && --depth === 0) return body.slice(start, i + 1);
-  }
-  return null;
-}
-
 export async function generateFrontierDigest(
   allCandidates: FrontierCandidate[],
 ): Promise<FrontierDigestResult> {
@@ -119,15 +105,8 @@ export async function generateFrontierDigest(
     return fallback(candidates);
   }
 
-  const json = extractJson(raw);
-  if (!json) return fallback(candidates);
-
-  let parsed: { headline?: unknown; intro?: unknown; picks?: unknown };
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return fallback(candidates);
-  }
+  const parsed = safeParseModelJson<{ headline?: unknown; intro?: unknown; picks?: unknown }>(raw);
+  if (!parsed) return fallback(candidates);
 
   const picks = Array.isArray(parsed.picks) ? parsed.picks : [];
   const seen = new Set<number>();

@@ -19,13 +19,10 @@ import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { eq, and, sql, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds, upsertEntityAttribute, deleteEntityAttribute } from "./utils";
+import { escapeLike } from "@/lib/sql-escape";
 import type { z } from "zod";
 
 export { CreateRobotBody, PatchRobotBody, type CreateRobotInput };
-
-function escapeLike(s: string): string {
-  return s.replace(/[%_\\]/g, "\\$&");
-}
 
 export type RobotWithAttributes = {
   id: string;

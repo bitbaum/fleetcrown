@@ -100,6 +100,10 @@ export class ListenLoop {
   }
 }
 
+// The app's copy lives in src/lib/async.ts and desktop imports it from there.
+// bridge cannot: its tsconfig pins `rootDir: "src"`, so nothing outside this
+// directory compiles into the bundle. One line duplicated beats widening the
+// build root of a process that is deliberately standalone.
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getProjectsByOrangeCatEntity } from "@/db/queries/orangecat-links";
 import { createOrchestrationEventOnce } from "@/db/queries/orchestration-events";
 import { logDebug } from "@/db/queries/debug-logs";
-import { verifyOrangeCatWebhookSignature } from "@/lib/integrations/orangecat-webhook";
+import { readSignedOrangeCatBody } from "@/lib/integrations/orangecat-webhook";
 
 /**
  * OrangeCat event webhook — economic signals flowing back into the fleet.
@@ -28,30 +28,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.ORANGECAT_WEBHOOK_SECRET;
-  if (!secret) {
-    return NextResponse.json({ error: "events webhook not configured" }, { status: 503 });
-  }
-
-  const raw = await req.text();
-  if (!verifyOrangeCatWebhookSignature(raw, req.headers.get("x-orangecat-signature"), secret)) {
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
-  }
-
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-  }
-  const parsed = Body.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid body", details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
-  const ev = parsed.data;
+  const dataOrResp = await readSignedOrangeCatBody(req, Body, "events webhook not configured");
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const ev = dataOrResp;
 
   try {
     const linkedProjects = await getProjectsByOrangeCatEntity(ev.entityType, ev.entityId);

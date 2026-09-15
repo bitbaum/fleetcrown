@@ -2,6 +2,7 @@ import Link from "next/link";
 import { FLEET_RUNNER_RELEASES, CURRENT_RELEASE, PLATFORM_CHANGELOG } from "@/config/changelog";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
+import { longDate } from "@/lib/dates";
 
 export const metadata = {
   title: "Changelog",
@@ -9,15 +10,6 @@ export const metadata = {
 };
 
 const RELEASES_GH_BASE = "https://github.com/bitbaum/loki-releases/releases/tag";
-
-// Full month, uppercased in CSS — matches the x.ai changelog date style.
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 type FleetRunnerRelease = (typeof FLEET_RUNNER_RELEASES)[number];
 
@@ -32,7 +24,7 @@ function ReleaseArticle({ release, isLatest }: { release: FleetRunnerRelease; is
     <article id={release.tag} className="ui-changelog-entry scroll-mt-24">
       <div className="ui-changelog-meta">
         <time className="ui-changelog-date" dateTime={release.date}>
-          {formatDate(release.date)}
+          {longDate(release.date)}
         </time>
         <span className="ui-changelog-version">v{release.version}</span>
         {isLatest && <span className="ui-changelog-current">Latest</span>}
@@ -106,7 +98,7 @@ export default function ReleasesPage() {
               What shipped, what changed, and why — platform milestones and every Fleet Runner
               version. The latest runner is{" "}
               <span className="ui-changelog-code">v{CURRENT_RELEASE.version}</span>, published{" "}
-              {formatDate(CURRENT_RELEASE.date)}.
+              {longDate(CURRENT_RELEASE.date)}.
             </p>
             <div className="ui-changelog-foot">
               <Link href="/download" className="ui-changelog-link">
@@ -143,7 +135,7 @@ export default function ReleasesPage() {
                 <article key={`${entry.date}-${entry.title}`} className="ui-changelog-entry">
                   <div className="ui-changelog-meta">
                     <time className="ui-changelog-date" dateTime={entry.date}>
-                      {formatDate(entry.date)}
+                      {longDate(entry.date)}
                     </time>
                     {idx === 0 && <span className="ui-changelog-current">Latest</span>}
                   </div>
@@ -189,8 +181,7 @@ export default function ReleasesPage() {
                 <summary className="ui-changelog-archive-summary">
                   v{minor}.x — {releases.length} {releases.length === 1 ? "release" : "releases"}
                   <span className="ui-changelog-archive-range">
-                    {formatDate(releases[releases.length - 1].date)} –{" "}
-                    {formatDate(releases[0].date)}
+                    {longDate(releases[releases.length - 1].date)} – {longDate(releases[0].date)}
                   </span>
                 </summary>
                 {releases.map((release) => (

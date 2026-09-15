@@ -14,7 +14,7 @@
 // the loop — a missed gate is recoverable, a stuck loop is not.
 
 import { callGroqText } from "@/lib/groq";
-import { stripReasoning } from "@/lib/agent/llm";
+import { safeParseModelJson } from "@/lib/ai/model-json";
 import { ESCALATION_HUMAN_STREAK } from "./escalation-ladder";
 import type { RunClosePatch } from "./close-from-session";
 import type { OrchestrationTaskSummary } from "./contract";
@@ -90,21 +90,6 @@ export function summaryForJudge(s: OrchestrationTaskSummary): string {
     .join("\n");
 }
 
-function extractJson(raw: string): string | null {
-  // Was a third hand-rolled copy of the same `</think>` slice. Three copies is
-  // how the CHAT path — the only one a human reads — ended up with none, and
-  // shipped a model's private reasoning into the transcript.
-  const text = stripReasoning(raw);
-  const start = text.indexOf("{");
-  if (start === -1) return null;
-  let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    if (text[i] === "{") depth++;
-    else if (text[i] === "}" && --depth === 0) return text.slice(start, i + 1);
-  }
-  return null;
-}
-
 /** Ask a different-lineage model whether the handoff meets the DoD. Fail-open. */
 export async function verifyDefinitionOfDone(
   definitionOfDone: string,
@@ -125,17 +110,12 @@ export async function verifyDefinitionOfDone(
   } catch {
     return { met: true, gap: "" }; // fail-open: don't wedge the loop on a judge error
   }
-  const json = extractJson(raw);
-  if (!json) return { met: true, gap: "" };
-  try {
-    const parsed = JSON.parse(json) as { met?: unknown; gap?: unknown };
-    return {
-      met: parsed.met !== false,
-      gap: typeof parsed.gap === "string" ? parsed.gap.trim() : "",
-    };
-  } catch {
-    return { met: true, gap: "" };
-  }
+  const parsed = safeParseModelJson<{ met?: unknown; gap?: unknown }>(raw);
+  if (!parsed) return { met: true, gap: "" };
+  return {
+    met: parsed.met !== false,
+    gap: typeof parsed.gap === "string" ? parsed.gap.trim() : "",
+  };
 }
 
 /**

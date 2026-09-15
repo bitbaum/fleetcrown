@@ -11,6 +11,8 @@
  * not naive regex over the whole document, because attribute order varies.
  */
 
+import { decodeEntities } from "@/lib/escape-html";
+
 export type ParsedSite = {
   title: string | null;
   description: string | null;
@@ -66,17 +68,6 @@ function parseAttributes(tag: string): Record<string, string> {
     attrs[m[1].toLowerCase()] = decodeEntities(value.trim());
   }
   return attrs;
-}
-
-/** The handful of entities that actually show up in titles and descriptions. */
-function decodeEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, " ");
 }
 
 function clean(value: string | undefined | null, max: number): string | null {

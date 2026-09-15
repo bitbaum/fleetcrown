@@ -221,3 +221,85 @@ export function AuthModeTabs({
     </div>
   );
 }
+
+/**
+ * The fields every account-creating form asks for, in the order both asked for
+ * them. /setup (the first admin) and SignUpForm (everyone after) had this block
+ * written out twice, identical down to the placeholders and autocomplete hints
+ * — which matters more than it looks: a password manager keys off those, so a
+ * drift between the two forms is a drift in whether saved credentials work.
+ *
+ * The only difference was that sign-up also asks for an email. Pass `email` to
+ * get that field; omit it and it is not rendered.
+ */
+export function CreateAccountFields({
+  name,
+  onName,
+  namePlaceholder,
+  email,
+  onEmail,
+  password,
+  onPassword,
+  confirm,
+  onConfirm,
+}: {
+  name: string;
+  onName: (value: string) => void;
+  namePlaceholder: string;
+  email?: string;
+  onEmail?: (value: string) => void;
+  password: string;
+  onPassword: (value: string) => void;
+  confirm: string;
+  onConfirm: (value: string) => void;
+}) {
+  return (
+    <>
+      <AuthField label="Your name">
+        <AuthInput
+          type="text"
+          value={name}
+          onChange={(e) => onName(e.target.value)}
+          placeholder={namePlaceholder}
+          autoComplete="name"
+          required
+        />
+      </AuthField>
+
+      {email !== undefined && onEmail && (
+        <AuthField label="Email">
+          <AuthInput
+            type="email"
+            value={email}
+            onChange={(e) => onEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            required
+          />
+        </AuthField>
+      )}
+
+      <AuthField label="Password">
+        <AuthInput
+          type="password"
+          value={password}
+          onChange={(e) => onPassword(e.target.value)}
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          required
+        />
+      </AuthField>
+
+      <AuthField label="Confirm password">
+        <AuthInput
+          type="password"
+          value={confirm}
+          onChange={(e) => onConfirm(e.target.value)}
+          placeholder="Repeat password"
+          autoComplete="new-password"
+          required
+        />
+      </AuthField>
+    </>
+  );
+}

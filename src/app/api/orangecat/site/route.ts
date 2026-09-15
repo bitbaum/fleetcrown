@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getUserByOrangeCatActorId } from "@/db/queries/users";
 import { countRecentNewSiteCommands } from "@/db/queries/pending-commands";
 import { logDebug } from "@/db/queries/debug-logs";
-import { verifyOrangeCatWebhookSignature } from "@/lib/integrations/orangecat-webhook";
+import { readSignedOrangeCatBody } from "@/lib/integrations/orangecat-webhook";
 import { requestNewSite } from "@/lib/hosted-runner/provision";
 
 /**
@@ -88,32 +88,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.ORANGECAT_WEBHOOK_SECRET;
-  if (!secret) {
-    // Fail closed: with no secret we cannot tell OrangeCat from anyone else,
-    // and this endpoint creates domains.
-    return NextResponse.json({ error: "site provisioning not configured" }, { status: 503 });
-  }
-
-  const raw = await req.text();
-  if (!verifyOrangeCatWebhookSignature(raw, req.headers.get("x-orangecat-signature"), secret)) {
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
-  }
-
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-  }
-  const parsed = Body.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "invalid body", details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
-  const { actorId, slug, title, kind, originUrl } = parsed.data;
+  const dataOrResp = await readSignedOrangeCatBody(req, Body, "site provisioning not configured");
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { actorId, slug, title, kind, originUrl } = dataOrResp;
 
   const user = await getUserByOrangeCatActorId(actorId);
   if (!user) {

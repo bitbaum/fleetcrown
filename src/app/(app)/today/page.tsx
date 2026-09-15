@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { NAV } from "@/config/navigation";
 import { CardSkeleton } from "@/components/ui/card";
 import { Greeting } from "@/components/today/Greeting";
@@ -30,6 +30,21 @@ import { AutoRefresh } from "@/components/shared/AutoRefresh";
 import { REFRESH_CADENCE } from "@/config/refresh";
 
 export const metadata = { title: "Today" };
+
+/** Every card below streams in behind the same skeleton. Writing that out
+ *  eleven times buried what this page is actually saying — which decisions come
+ *  first — under its loading mechanics. */
+const Streamed = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<CardSkeleton />}>{children}</Suspense>
+);
+
+/** The page's one row shape: a single column on a phone, two from md up.
+ *  `alignTop` is for rows whose two cards differ in height. */
+const CardRow = ({ children, alignTop = false }: { children: ReactNode; alignTop?: boolean }) => (
+  <div className={`grid grid-cols-1 md:grid-cols-2 gap-4${alignTop ? " items-start" : ""}`}>
+    {children}
+  </div>
+);
 
 async function loadTodayInputs() {
   // Inline diagnostic — /today has been crashing in production with an
@@ -116,42 +131,42 @@ export default async function TodayPage() {
 
             {/* Loki's proactive read on the private zone — one thing to focus on,
           plus a totals strip across categories. Renders only when unlocked. */}
-            <Suspense fallback={<CardSkeleton />}>
+            <Streamed>
               <TodayWatch />
-            </Suspense>
+            </Streamed>
 
             {/* Decisions first — the only cards that ask the reader for
                 something. On a 390px phone the ordering here is the difference
                 between one thumb-scroll and four, so read-only recap must never
                 climb above this block. */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Suspense fallback={<CardSkeleton />}>
+            <CardRow>
+              <Streamed>
                 <StickyNoteCard />
-              </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
+              </Streamed>
+              <Streamed>
                 <ActionQueueCard />
-              </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
+              </Streamed>
+              <Streamed>
                 <AlertsCard />
-              </Suspense>
-            </div>
+              </Streamed>
+            </CardRow>
 
             {/* Today itself — the two cards that are only true right now. */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardRow>
               <CalendarCard />
               <WeatherCard />
-            </div>
+            </CardRow>
 
             {/* Habits are a today action (check one off), so they stay out of
                 the disclosure below with the read-only recap. */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-              <Suspense fallback={<CardSkeleton />}>
+            <CardRow alignTop>
+              <Streamed>
                 <HabitsCard />
-              </Suspense>
-              <Suspense fallback={<CardSkeleton />}>
+              </Streamed>
+              <Streamed>
                 <CommitmentsCard />
-              </Suspense>
-            </div>
+              </Streamed>
+            </CardRow>
 
             {/*
               Everything below is recap or a summary of a page that already
@@ -174,26 +189,26 @@ export default async function TodayPage() {
                 </span>
               </summary>
               <div className="ui-disclosure-body space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                  <Suspense fallback={<CardSkeleton />}>
+                <CardRow alignTop>
+                  <Streamed>
                     <GoalsDueCard />
-                  </Suspense>
-                  <Suspense fallback={<CardSkeleton />}>
+                  </Streamed>
+                  <Streamed>
                     <EventsDueCard />
-                  </Suspense>
-                  <Suspense fallback={<CardSkeleton />}>
+                  </Streamed>
+                  <Streamed>
                     <StuckGoalsCard />
-                  </Suspense>
-                  <Suspense fallback={<CardSkeleton />}>
+                  </Streamed>
+                  <Streamed>
                     <SubscriptionsCard />
-                  </Suspense>
-                </div>
-                <Suspense fallback={<CardSkeleton />}>
+                  </Streamed>
+                </CardRow>
+                <Streamed>
                   <FleetBriefCard userId={userId} />
-                </Suspense>
-                <Suspense fallback={<CardSkeleton />}>
+                </Streamed>
+                <Streamed>
                   <RecentRunsCard />
-                </Suspense>
+                </Streamed>
               </div>
             </details>
             <AutoRefresh intervalMs={REFRESH_CADENCE.today} />
