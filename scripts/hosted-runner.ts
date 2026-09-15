@@ -43,6 +43,13 @@ import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import type { AdapterId, OrchestrationEventType } from "@/lib/orchestration";
 import { analyzeRepo } from "@/lib/hosted-runner/analyze";
 import { runHermesTask } from "@/lib/hosted-runner/run-hermes";
+import {
+  getOrchestrationRunById,
+  stampRunDelivered,
+  updateOrchestrationRun,
+} from "@/db/queries/orchestration-runs";
+import { ORCHESTRATION_OUTCOME } from "@/db/schema/orchestration-runs";
+import { ORCH_STATE } from "@/lib/orchestration/contract";
 
 // The real executor id for a hosted coding dispatch. Hermes is a legitimate
 // agent id (ALL_ADAPTERS) but intentionally NOT in the dispatchable
@@ -77,6 +84,49 @@ function renderRecentActivity(rows: RecentProjectActivity[]): string | null {
     "Recent activity on this project (newest first — already done, do NOT repeat or undo it):",
     ...lines,
   ].join("\n");
+}
+
+/**
+ * Close the tracked run a hosted dispatch was pinned to.
+ *
+ * The runner PTY path closes its run from the agent's session handoff; there
+ * is no PTY here, so the hosted runner is the closer. Going through
+ * updateOrchestrationRun is what makes the close ordinary: the outcome turn
+ * reaches the thread that asked, the ledger and escalation bookkeeping run,
+ * and the PR is on the run as evidence rather than buried in a dev-log line.
+ */
+async function closeHostedRun(
+  userId: string,
+  runId: string,
+  result:
+    | { ok: true; summary: string; prUrl?: string; branch?: string; noChanges?: boolean }
+    | { ok: false; error: string },
+): Promise<void> {
+  const run = await getOrchestrationRunById(userId, runId).catch(() => null);
+  if (!run || run.finishedAt) return;
+  const outcome = !result.ok
+    ? ORCHESTRATION_OUTCOME.ERROR
+    : result.prUrl || result.noChanges
+      ? ORCHESTRATION_OUTCOME.SUCCESS
+      : ORCHESTRATION_OUTCOME.PARTIAL;
+  const evidence =
+    result.ok && result.prUrl
+      ? { kind: "pr", url: result.prUrl, title: "hosted runner pull request", atMs: Date.now() }
+      : undefined;
+  await updateOrchestrationRun(
+    runId,
+    {
+      state: result.ok ? ORCH_STATE.DONE : ORCH_STATE.ERROR,
+      outcome,
+      finishedAt: new Date(),
+      payload: {
+        ...(run.payload ?? {}),
+        ...(result.ok ? { resultText: result.summary } : { error: result.error }),
+        ...(evidence ? { evidence } : {}),
+      },
+    },
+    userId,
+  ).catch((err) => console.error("[hosted-runner] run close failed:", err));
 }
 
 async function logResult(userId: string, projectKey: string, label: string, text: string) {
@@ -250,6 +300,7 @@ async function tick(userId: string): Promise<boolean> {
     if (cmd.type === "hosted_dispatch") {
       // Phase 1: write-class task → Hermes in its own sandbox (orchestrate, not out-build).
       console.log(`[hosted-runner] dispatch→hermes ${p.projectKey}: ${p.task.slice(0, 60)}`);
+      if (p.runId) void stampRunDelivered(p.runId, userId);
       void emitHostedEvent(
         userId,
         p.projectKey,
@@ -275,6 +326,15 @@ async function tick(userId: string): Promise<boolean> {
           ? `${res.output}\n\n(Hermes made no file changes.)`
           : `${res.output}\n\n— changed:\n${res.diff || "(no diff)"}${res.prUrl ? `\n\nPR: ${res.prUrl}` : res.branch ? `\n\nPushed branch: ${res.branch}` : ""}`;
         await markCommandExecuted(cmd.id, userId, { ok: true, text: summary });
+        if (p.runId) {
+          await closeHostedRun(userId, p.runId, {
+            ok: true,
+            summary,
+            prUrl: res.prUrl,
+            branch: res.branch,
+            noChanges: res.noChanges,
+          });
+        }
         await logResult(
           userId,
           p.projectKey,
@@ -297,6 +357,7 @@ async function tick(userId: string): Promise<boolean> {
         );
       } else {
         await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
+        if (p.runId) await closeHostedRun(userId, p.runId, { ok: false, error: res.error });
         // Failures used to vanish into console only — log + emit so a broken hosted
         // path is visible in the project dev log and Activity, not archaeology.
         await logResult(

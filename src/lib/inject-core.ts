@@ -46,6 +46,7 @@ import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-st
 import { logDebug } from "@/db/queries/debug-logs";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
+import { isHostedBuilderPref } from "@/lib/constants/statuses";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
@@ -392,6 +393,50 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Locus lock always wins. Otherwise a caller-preferred channel (feedback
   // Implement → cloud) overrides the stored laptop pref so phone taps do not
   // queue for a machine nobody is watching.
+  const isLifecycle = promptKey === "close_session" || promptKey === "hard_stop";
+  // A project pinned to the HOSTED builder never touches a runner PTY: the
+  // task goes straight to the hosted runner (Hermes, in its own clone, on the
+  // providers the box already holds keys for), which closes the tracked run
+  // with the PR as evidence. This is the unattended path that needs no Claude
+  // credential — see HOSTED_BUILDER_PREF. Lifecycle commands (close/stop)
+  // have no PTY to act on here and are answered as a no-op.
+  if (isHostedBuilderPref(dbMatch.builderPref) && !isLifecycle && dbMatch.gitUrl) {
+    const hostedId = await enqueueHostedDispatchCommand(userId, {
+      projectKey: canonical,
+      gitUrl: dbMatch.gitUrl,
+      task: prompt,
+      ...(runId ? { runId } : {}),
+      ...(projectId ? { projectId } : {}),
+    });
+    void createOrchestrationEventOnce(
+      {
+        userId,
+        projectId,
+        projectKey: canonical,
+        eventType: "continue_requested",
+        source: "hosted-runner",
+        adapter: "hermes" as AdapterId,
+        intent: eventIntent,
+        detail: "Routed to the hosted runner (Hermes) — project pinned to the hosted builder",
+        happenedAt: new Date(nowS * 1000),
+      },
+      `hosted-dispatch:${hostedId}`,
+    ).catch((err) => console.error("[inject] hosted event emit failed:", err));
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        tab: effectiveTab,
+        mode: "queued",
+        channel: null,
+        commandId: hostedId,
+        runnerConnected: true,
+        hostedDispatchId: hostedId,
+        hostedRunner: "hermes",
+        ...(runId && { runId }),
+      },
+    };
+  }
   const pinnedChannel =
     projectChannelLock(dbMatch) ?? params.builderChannel ?? pickDispatchChannel(dbMatch);
 
@@ -597,7 +642,6 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Only for real coding tasks with a git URL — never for lifecycle commands
   // (close/stop) or projects we can't clone. Hermes uses its own configured
   // Nous model, so we deliberately don't pass the local agent's model pref.
-  const isLifecycle = promptKey === "close_session" || promptKey === "hard_stop";
   let hostedDispatchId: string | undefined;
   if (params.allowHostedFallback !== false && queuedOffline && !isLifecycle && dbMatch.gitUrl) {
     hostedDispatchId = await enqueueHostedDispatchCommand(userId, {
