@@ -71,7 +71,7 @@ export function ProjectKickoff({
   // Seeded with the project's own description, and editable from here. It used
   // to be hidden whenever a description existed, which meant a one-sentence
   // description became the entire brief with no way to improve it on the page
-  // that runs on it — HamsterCheek's real brief had to be written straight to
+  // that runs on it — Zeitkastli's real brief had to be written straight to
   // the database. Everything below is derived from this text, so this text is
   // the thing to put in front of the person, not behind a length check.
   const [text, setText] = useState(description ?? "");

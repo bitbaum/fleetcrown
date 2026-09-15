@@ -47,17 +47,17 @@ function ok(cond: unknown, msg: string) {
   }
 }
 
-eq(siteCdSlug("Hamster Cheek"), "hamster-cheek", "slug from display name");
-eq(siteCdLiveUrl("hamster-cheek"), "https://hamster-cheek.orangecat.ch", "predicted live URL");
-ok(isValidSiteSlug("hamster-cheek"), "valid slug");
+eq(siteCdSlug("Time Capsule"), "time-capsule", "slug from display name");
+eq(siteCdLiveUrl("time-capsule"), "https://time-capsule.orangecat.ch", "predicted live URL");
+ok(isValidSiteSlug("time-capsule"), "valid slug");
 ok(!isValidSiteSlug("loki"), "loki reserved");
 ok(RESERVED_SITE_SLUGS.has("loki"), "reserved set includes control plane");
 ok(templateSupportsSiteCd("nextjs-tailwind"), "nextjs supports CD");
 ok(templateSupportsSiteCd("bare"), "bare can register CD");
 ok(!templateSupportsSiteCd("hono-cloudflare"), "workers starter is not selfhost-deploy");
 
-const yml = deployWorkflowYaml("hamster-cheek");
-ok(yml.includes("app: hamster-cheek"), "deploy shim carries apps.conf key");
+const yml = deployWorkflowYaml("time-capsule");
+ok(yml.includes("app: time-capsule"), "deploy shim carries apps.conf key");
 ok(yml.includes("selfhost-deploy.yml@main"), "deploy shim calls loki reusable workflow");
 ok(
   yml.includes("HETZNER_SSH_PRIVATE_KEY: ${{ secrets.HETZNER_SSH_PRIVATE_KEY }}"),
@@ -67,22 +67,22 @@ ok(!yml.includes("secrets: inherit"), "deploy shim does not rely on secrets: inh
 eq(DEPLOY_WORKFLOW_PATH, ".github/workflows/deploy.yml", "workflow path SSOT");
 
 const cmd = registerSiteCommand({
-  slug: "hamster-cheek",
-  repo: "bitbaum/hamster-cheek",
-  title: "Hamster Cheek",
+  slug: "time-capsule",
+  repo: "bitbaum/time-capsule",
+  title: "Time Capsule",
 });
-ok(cmd.includes("register-site.sh hamster-cheek"), "command names register-site.sh");
-ok(cmd.includes("--repo bitbaum/hamster-cheek"), "command passes repo");
+ok(cmd.includes("register-site.sh time-capsule"), "command names register-site.sh");
+ok(cmd.includes("--repo bitbaum/time-capsule"), "command passes repo");
 
 const good = planSiteCd({
-  projectName: "Hamster Cheek",
-  repoFullName: "catomean/hamster-cheek",
+  projectName: "Time Capsule",
+  repoFullName: "catomean/time-capsule",
   template: "nextjs-tailwind",
 });
 ok(good.ok === true, "plan succeeds for nextjs");
 if (good.ok) {
-  eq(good.slug, "hamster-cheek", "plan slug");
-  eq(good.liveUrl, "https://hamster-cheek.orangecat.ch", "plan live URL");
+  eq(good.slug, "time-capsule", "plan slug");
+  eq(good.liveUrl, "https://time-capsule.orangecat.ch", "plan live URL");
   ok(good.command.includes("register-site.sh"), "plan includes box command");
 }
 

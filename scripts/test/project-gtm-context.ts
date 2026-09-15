@@ -39,7 +39,7 @@ async function main() {
   function dossier(attrs: Record<string, string>): ProjectDossier {
     return {
       detail: {
-        project: { name: "HamsterCheek", description: "A box you hide outside." },
+        project: { name: "Zeitkastli", description: "A capsule you leave somewhere." },
         attrs,
         linkedGoals: [],
         devLog: [],

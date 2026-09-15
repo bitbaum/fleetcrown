@@ -36,7 +36,7 @@ const projects = [
   "datacat",
   "evig",
   "loki",
-  "HamsterCheek",
+  "Zeitkastli",
   "ivy-portal",
   "orangecat",
   "Heidi",

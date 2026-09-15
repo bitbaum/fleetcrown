@@ -17,7 +17,7 @@ export type ComposedPrompt = { prompt: string; error?: never } | { prompt?: neve
 /**
  * Appended to every dispatch kind — the standing terms of any dispatched run.
  *
- * The shipping clause is not boilerplate. A kickoff run built HamsterCheek's
+ * The shipping clause is not boilerplate. A kickoff run built Zeitkastli's
  * entire first milestone (schema, migration, map picker, upload, tests, all
  * green) and left it sitting in `git status` while its session ended; it was
  * found stranded 13 hours later, and only because someone went looking. The

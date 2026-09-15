@@ -103,7 +103,7 @@ for (const setup of [
 }
 
 // ── Placeholder answers are not answers ─────────────────────────────────────
-// HamsterCheek, live on prod 2026-08-04: the extractor wrote `stack: "Unknown"`
+// Zeitkastli, live on prod 2026-08-04: the extractor wrote `stack: "Unknown"`
 // because the prompt only says "omit if unknown" on 3 of its 17 fields. That
 // string is truthy, so the planner skipped the profile step for a project whose
 // profile was not filled in — and the agent would have been briefed with
@@ -132,11 +132,11 @@ for (const v of ["Unknown", "n/a", "", "  ", "Next.js", "No known competitors ye
 eq(
   missingKickoffSetup({ attrs: { ...FULL_ATTRS, stack: "Unknown" }, goalCount: 5, hasRepo: true }),
   ["profile"],
-  "the HamsterCheek case: a placeholder stack still needs the profile step",
+  "the Zeitkastli case: a placeholder stack still needs the profile step",
 );
 
 // ── Hidden is not empty ─────────────────────────────────────────────────────
-// HamsterCheek, live on prod 2026-08-05: getProjectDetail returns linkedGoals
+// Zeitkastli, live on prod 2026-08-05: getProjectDetail returns linkedGoals
 // []` whenever the private zone is PIN-locked, so a project with five
 // milestones read as a project with none. The page said "No goals are linked to
 // this project" and the hero offered to plan the milestones — one press would
@@ -200,11 +200,11 @@ for (const goalsLocked of [true, false]) {
 }
 
 // ── Thin briefs are flagged, never blocked ──────────────────────────────────
-// HamsterCheek's original description was one sentence. It cleared the 10-char
+// Zeitkastli's original description was one sentence. It cleared the 10-char
 // floor, so the hero hid the editor and that sentence silently became the whole
 // brief — which is why the extractor had nothing to infer a stack from.
 eq(
-  isThinBrief("HamsterCheek allows people to hide physical items in various locations."),
+  isThinBrief("Zeitkastli lets people record where they left something."),
   true,
   "one sentence runs, but is flagged as thin",
 );
@@ -223,13 +223,13 @@ eq(
 eq(isThinBrief("x".repeat(KICKOFF_THIN_DESCRIPTION - 1)), true, "one char under is still thin");
 // The advisory must never become a gate: a thin brief still starts the project.
 eq(
-  hasKickoffSource("HamsterCheek allows people to hide physical items in various locations."),
+  hasKickoffSource("Zeitkastli lets people record where they left something."),
   true,
   "a thin brief is still a valid source — flagged, not refused",
 );
 
 eq(hasKickoffSource("too short"), false, "9 chars is below the brief route's floor");
-eq(hasKickoffSource("a hiding box"), true, "a sentence is enough of a brief");
+eq(hasKickoffSource("a time capsule"), true, "a sentence is enough of a brief");
 eq(hasKickoffSource(null), false, "no description is no source");
 eq(hasKickoffSource("            "), false, "whitespace is no source");
 
