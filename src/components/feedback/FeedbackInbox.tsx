@@ -292,7 +292,11 @@ export function FeedbackInbox() {
         <InboxSection
           title="Under way"
           count={underWay.length}
-          aside="moving on its own — nothing to do"
+          aside={
+            underWay.some((f) => f.work.phase === "queued")
+              ? "Watch for progress — Telegram if it stalls"
+              : "moving on its own — Watch if you want to see"
+          }
         >
           {underWay.map((f) => (
             <Row

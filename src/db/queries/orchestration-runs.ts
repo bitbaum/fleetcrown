@@ -722,3 +722,42 @@ export async function countRunsByStateSince(
     .groupBy(orchestrationRuns.state);
   return Object.fromEntries(rows.map((r) => [r.state, Number(r.n)]));
 }
+
+/** Stamp a one-shot feedback auto-retry so cron cannot loop. jsonb_set — never
+ *  replace the whole payload (that would drop deliveredAt / projectKey). */
+export async function stampFeedbackAutoRetried(
+  runId: string,
+  userId: string,
+  extra?: Record<string, unknown>,
+): Promise<void> {
+  const stamp = new Date().toISOString();
+  let payloadSql = sql`jsonb_set(COALESCE(payload, '{}'), '{feedbackAutoRetriedAt}', ${JSON.stringify(stamp)}::jsonb)`;
+  if (extra?.priorRunId && typeof extra.priorRunId === "string") {
+    payloadSql = sql`jsonb_set(${payloadSql}, '{priorRunId}', ${JSON.stringify(extra.priorRunId)}::jsonb)`;
+  }
+  await db
+    .update(orchestrationRuns)
+    .set({ payload: payloadSql })
+    .where(and(eq(orchestrationRuns.id, runId), eq(orchestrationRuns.userId, userId)));
+}
+
+/** Persist the pending command id on the run so Watch can poll live status. */
+export async function stampRunCommandId(
+  runId: string,
+  userId: string,
+  commandId: string,
+): Promise<void> {
+  await db
+    .update(orchestrationRuns)
+    .set({
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{commandId}', ${JSON.stringify(commandId)}::jsonb)`,
+    })
+    .where(
+      and(
+        eq(orchestrationRuns.id, runId),
+        eq(orchestrationRuns.userId, userId),
+        isNull(orchestrationRuns.finishedAt),
+      ),
+    );
+}
+

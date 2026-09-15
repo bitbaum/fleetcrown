@@ -50,3 +50,45 @@ export async function emitRunEvent(
       console.error("[run-events] emit failed:", kind, runId, err);
     });
 }
+
+/**
+ * Latest hop per run — for feedback Watch step summaries. Ascending fetch then
+ * last-write-wins so a small IN list stays one query.
+ */
+export async function getLatestRunEventKinds(
+  runIds: string[],
+): Promise<Map<string, RunEventKind>> {
+  if (runIds.length === 0) return new Map();
+  const rows = await db
+    .select({ runId: runEvents.runId, kind: runEvents.kind })
+    .from(runEvents)
+    .where(inArray(runEvents.runId, runIds))
+    .orderBy(asc(runEvents.createdAt));
+  const out = new Map<string, RunEventKind>();
+  for (const r of rows) out.set(r.runId, r.kind);
+  return out;
+}
+
+/** Full event trail for one run — progressive disclosure under Watch. */
+export async function listRunEventsForRun(
+  runId: string,
+  userId: string,
+  limit = 40,
+): Promise<{ kind: RunEventKind; detail: Record<string, unknown> | null; createdAt: Date }[]> {
+  const rows = await db
+    .select({
+      kind: runEvents.kind,
+      detail: runEvents.detail,
+      createdAt: runEvents.createdAt,
+      userId: runEvents.userId,
+    })
+    .from(runEvents)
+    .where(and(eq(runEvents.runId, runId), eq(runEvents.userId, userId)))
+    .orderBy(asc(runEvents.createdAt))
+    .limit(Math.min(Math.max(limit, 1), 100));
+  return rows.map((r) => ({
+    kind: r.kind,
+    detail: (r.detail as Record<string, unknown> | null) ?? null,
+    createdAt: r.createdAt,
+  }));
+}

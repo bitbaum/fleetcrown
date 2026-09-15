@@ -1,4 +1,7 @@
 import { getOrchestrationRunsByIds } from "@/db/queries/orchestration-runs";
+import { getLatestRunEventKinds } from "@/db/queries/run-events";
+import { getOpenPendingByRunIds } from "@/db/queries/pending-commands";
+import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { getUserProjectsByEntityIds } from "@/db/queries/user-projects";
 import type { FeedbackListItem } from "@/db/queries/site-feedback";
 import {
@@ -53,6 +56,12 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
     ...new Set(items.map((i) => i.dispatchedRunId).filter((id): id is string => !!id)),
   ];
   const runs = await getOrchestrationRunsByIds(userId, runIds);
+  const [latestKinds, pendingByRun, presence] = await Promise.all([
+    getLatestRunEventKinds(runIds),
+    getOpenPendingByRunIds(userId, runIds),
+    getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false })),
+  ]);
+  const builderOffline = !presence.cloud && !presence.any;
 
   // Projects first: deciding whether a cached ledger is still ABOUT the right
   // pull request means re-parsing the handoff, and that needs the repo.
@@ -159,7 +168,27 @@ export async function attachFeedbackWork<T extends FeedbackListItem>(
   return items.map((item) => {
     const row = item.dispatchedRunId ? runs.get(item.dispatchedRunId) : undefined;
     const snap = runToFeedbackSnapshot(row);
-    if (snap && row && refreshed.has(row.id)) snap.fix = refreshed.get(row.id) ?? null;
+    if (snap && row) {
+      if (refreshed.has(row.id)) snap.fix = refreshed.get(row.id) ?? null;
+      snap.latestEventKind = latestKinds.get(row.id) ?? null;
+      const pending = pendingByRun.get(row.id);
+      if (pending) {
+        snap.pendingUnclaimed = pending.claimedAt == null;
+        snap.hostedPending = pending.type === "hosted_dispatch";
+        snap.commandId = pending.id;
+      } else {
+        snap.pendingUnclaimed = false;
+      }
+      const payload = row.payload as {
+        commandId?: string;
+        hostedDispatchId?: string;
+        feedbackAutoRetriedAt?: string;
+      } | null;
+      if (!snap.commandId && payload?.commandId) snap.commandId = payload.commandId;
+      if (payload?.hostedDispatchId) snap.hostedPending = true;
+      snap.feedbackAutoRetriedAt = payload?.feedbackAutoRetriedAt ?? null;
+      snap.builderOffline = builderOffline;
+    }
     return { ...item, work: deriveFeedbackWork(item.status, snap) };
   });
 }
@@ -190,6 +219,9 @@ export function runToFeedbackSnapshot(row: RunRow | null | undefined): FeedbackR
     blocked?: string | null;
     error?: string;
     fix?: FixShipping;
+    commandId?: string;
+    hostedDispatchId?: string;
+    feedbackAutoRetriedAt?: string;
   } | null;
   return {
     id: row.id,
@@ -203,6 +235,9 @@ export function runToFeedbackSnapshot(row: RunRow | null | undefined): FeedbackR
     error: payload?.error ?? null,
     summaryDone: (row.summary as { done?: string } | null)?.done ?? null,
     fix: payload?.fix ?? null,
+    commandId: payload?.commandId ?? null,
+    hostedPending: !!payload?.hostedDispatchId,
+    feedbackAutoRetriedAt: payload?.feedbackAutoRetriedAt ?? null,
   };
 }
 

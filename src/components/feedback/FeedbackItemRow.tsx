@@ -9,6 +9,7 @@ import { deriveFeedbackWork, FEEDBACK_WORK_PHASE } from "@/lib/feedback/work-pha
 import type { FeedbackListItem } from "@/db/queries/site-feedback";
 import type { FeedbackListItemWithWork } from "@/lib/feedback/attach-work";
 import { FeedbackWorkBadge } from "@/components/feedback/FeedbackWorkBadge";
+import { FeedbackWatchButton, FeedbackWatchPanel } from "@/components/feedback/FeedbackWatch";
 import { fleetSurfaceHref } from "@/lib/fleet-context";
 import { livePageHref } from "@/lib/feedback/fix-shipping";
 
@@ -46,16 +47,16 @@ export function FeedbackItemRow({
   // the dispatch prompt. Plain Implement stays one-click.
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [watchOpen, setWatchOpen] = useState(false);
   const work = "work" in f && f.work ? f.work : deriveFeedbackWork(f.status, null);
-  const terminalHref = fleetSurfaceHref("terminal", projectName);
+  const terminalHref = fleetSurfaceHref("terminal", projectName, "cloud");
   // Terminal when there is a PTY to look at (the prompt reached an agent),
   // Control when there is not — Terminal is empty until a session exists.
   const watchLive = work.watchable === true;
-  // Watch only when a PTY exists. No "Open on Control" babysitting — when the
-  // machine is moving the badge is enough; Telegram interrupts when stuck.
-  const progressHref = watchLive ? terminalHref : null;
-  const progressLabel = watchLive ? "Watch" : null;
-  const progressTitle = watchLive ? (work.detail ?? "Open the agent's terminal") : null;
+  const terminalReady = work.terminalReady === true;
+  // Watch is the primary control whenever a run exists (Queued included).
+  // Terminal link appears inside Watch once a PTY exists.
+  const showWatch = watchLive;
   // Somewhere for an agent to work. Rows from the per-project inbox carry no
   // flag and keep the one-click Implement; the server refuses the same case.
   const runnable = "runnable" in f ? f.runnable !== false : true;
@@ -156,7 +157,11 @@ export function FeedbackItemRow({
           )}
           {(work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
             work.phase === FEEDBACK_WORK_PHASE.WORKING) && (
-            <p className="mt-1 text-xs text-text-muted">Moving — Telegram when you need to</p>
+            <p className="mt-1 text-xs text-text-muted">
+              {work.stepSummary
+                ? work.stepSummary
+                : "Moving — Telegram when you need to"}
+            </p>
           )}
           {work.phase === FEEDBACK_WORK_PHASE.NEEDS_VERIFY && work.didLine && (
             <p className="mt-0.5 text-xs text-text-tertiary" title="The agent's own account">
@@ -237,14 +242,8 @@ export function FeedbackItemRow({
           ) : work.phase === FEEDBACK_WORK_PHASE.QUEUED ||
             work.phase === FEEDBACK_WORK_PHASE.WORKING ? (
             <>
-              {progressHref && (
-                <a
-                  href={progressHref}
-                  className="ui-btn-save gap-1"
-                  title={progressTitle ?? undefined}
-                >
-                  {progressLabel}
-                </a>
+              {showWatch && (
+                <FeedbackWatchButton open={watchOpen} onToggle={() => setWatchOpen((v) => !v)} />
               )}
               <button
                 type="button"
@@ -259,14 +258,8 @@ export function FeedbackItemRow({
           ) : work.phase === FEEDBACK_WORK_PHASE.STUCK ||
             work.phase === FEEDBACK_WORK_PHASE.FAILED ? (
             <>
-              {progressHref && (
-                <a
-                  href={progressHref}
-                  className="ui-btn-secondary gap-1"
-                  title={progressTitle ?? undefined}
-                >
-                  {progressLabel}
-                </a>
+              {showWatch && (
+                <FeedbackWatchButton open={watchOpen} onToggle={() => setWatchOpen((v) => !v)} />
               )}
               <button
                 type="button"
@@ -425,10 +418,19 @@ export function FeedbackItemRow({
           </button>
         </div>
       )}
+
+      {watchOpen && showWatch && (
+        <FeedbackWatchPanel
+          feedbackId={f.id}
+          fallbackTerminalHref={terminalHref}
+          stepSummary={work.stepSummary}
+          queueReason={work.queueReason}
+          terminalReady={terminalReady}
+        />
+      )}
     </div>
   );
 }
-
 function ScreenshotsThumbnails({ feedbackId }: { feedbackId: string }) {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
