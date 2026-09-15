@@ -595,7 +595,7 @@ function FeedbackTriage({
                 )}
                 {watchable && (
                   <a
-                    href={fleetSurfaceHref("terminal", projectName)}
+                    href={fleetSurfaceHref("terminal", projectName, "cloud")}
                     className="ui-btn-secondary ui-btn-sm"
                     title={work.detail ?? "Open the agent's terminal"}
                   >

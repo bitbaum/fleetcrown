@@ -320,14 +320,16 @@ console.log("✓ feedback work-phase tests passed");
   assert.equal(silent.phase, FEEDBACK_WORK_PHASE.STUCK);
   assert.equal(silent.watchable, true);
 
-  // Queued (never delivered) has no terminal: the row goes to Control.
+  // Queued (never delivered) has no PTY yet, but Watch still opens — step
+  // summary + dig-in, Terminal only once terminalReady.
   const queued = deriveFeedbackWork(
     FEEDBACK_STATUS.DISPATCHED,
     snap({ startedAt: new Date(now - 10_000) }),
     now,
   );
   assert.equal(queued.phase, FEEDBACK_WORK_PHASE.QUEUED);
-  assert.equal(queued.watchable, undefined);
+  assert.equal(queued.watchable, true);
+  assert.equal(queued.terminalReady, false);
 
   // The elapsed label ladder.
   assert.equal(workElapsedLabel(new Date(now - 20_000), now), "under a minute");

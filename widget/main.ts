@@ -33,6 +33,12 @@ import {
   probeCorner,
   type Placement,
 } from "./placement";
+import {
+  defaultWidgetSurfaceMode,
+  parseWidgetSurfaceModes,
+  WIDGET_SURFACE_MODE_META,
+  type WidgetSurfaceMode,
+} from "./surface-modes";
 
 type Scope = "element" | "page" | "site";
 type SelectedEl = { elementType: string; elementText: string; selector: string };
@@ -106,7 +112,17 @@ function buildShadowCSS(theme: WidgetTheme): string {
 button { cursor: pointer; border: none; background: none; color: inherit; font: inherit; }
 button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${theme.accent}; outline-offset: 2px; }
 .mono { font-family: ${mono}; letter-spacing: .08em; text-transform: uppercase; font-size: 10px; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: ${theme.accent}; flex: none; box-shadow: 0 0 0 3px ${theme.accentMuted}; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: ${theme.accent}
+.modes { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+.mode {
+  font-size: 11px; padding: 4px 10px; border-radius: var(--rc, 6px);
+  border: 1px solid var(--border, #333); color: var(--text-sec, #aaa);
+  background: transparent;
+}
+.mode.on { border-color: var(--accent, #f60); color: var(--text, #fff); background: var(--accent-muted, rgba(255,102,0,.12)); }
+.mode:disabled { opacity: .55; cursor: not-allowed; }
+.mode-hint { font-size: 11px; color: var(--text-mut, #888); margin-top: 6px; line-height: 1.35; }
+; flex: none; box-shadow: 0 0 0 3px ${theme.accentMuted}; }
 
 /* ---- launcher: a Loki pill, not an orange circle ----
    QUIET UNTIL WANTED. This sits on every client's site, in the corner of every
@@ -485,6 +501,8 @@ function h<K extends keyof HTMLElementTagNameMap>(
   // operator can change without touching their site — but an explicitly set
   // attribute still wins (see boot()).
   const bottomOffset = parseInt(script?.getAttribute("data-fc-bottom") ?? "", 10);
+  // Modes are captured with the script tag (async scripts lose currentScript later).
+  const modesAttr = script?.getAttribute("data-fc-modes") ?? "report,chat,watch";
 
   /** Filled by boot() before mount(); the launcher never paints without it. */
   let placement: Placement = { ...DEFAULT_PLACEMENT };
@@ -738,15 +756,51 @@ function h<K extends keyof HTMLElementTagNameMap>(
     const panel = h("div", "panel");
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-modal", "true");
-    panel.setAttribute("aria-label", "Send feedback");
+    panel.setAttribute("aria-label", "Loki");
 
     const hdr = h("div", "hdr");
     const hdrText = h("div");
     // The brand line is what makes this recognisably Loki on a stranger's
     // site — the same mono micro-label Loki's own pages use.
     const brand = h("div", "brand");
-    brand.append(h("span", "dot"), h("span", "mono", "Loki · Feedback"));
+    brand.append(h("span", "dot"), h("span", "mono", "Loki"));
     hdrText.appendChild(brand);
+    // Surface modes: Report ships today; Chat / Watch are progressive seams
+    // (data-fc-modes="report,chat,watch"). The whole panel is Loki-on-the-site.
+    const enabledModes = parseWidgetSurfaceModes(modesAttr);
+    let surfaceMode: WidgetSurfaceMode = enabledModes.includes(defaultWidgetSurfaceMode())
+      ? defaultWidgetSurfaceMode()
+      : enabledModes[0]!;
+    const modesRow = h("div", "modes");
+    modesRow.setAttribute("role", "tablist");
+    modesRow.setAttribute("aria-label", "Loki modes");
+    const modeHint = h("div", "mode-hint");
+    const modeBtns = new Map<WidgetSurfaceMode, HTMLButtonElement>();
+    function syncModes() {
+      for (const [m, btn] of modeBtns) {
+        const meta = WIDGET_SURFACE_MODE_META[m];
+        btn.classList.toggle("on", m === surfaceMode);
+        btn.setAttribute("aria-selected", m === surfaceMode ? "true" : "false");
+        btn.disabled = !meta.shipped;
+        btn.title = meta.hint;
+      }
+      modeHint.textContent = WIDGET_SURFACE_MODE_META[surfaceMode].hint;
+    }
+    for (const m of enabledModes) {
+      const meta = WIDGET_SURFACE_MODE_META[m];
+      const btn = h("button", "mode", meta.label);
+      btn.setAttribute("role", "tab");
+      btn.addEventListener("click", () => {
+        if (!WIDGET_SURFACE_MODE_META[m].shipped) return;
+        surfaceMode = m;
+        syncModes();
+      });
+      modeBtns.set(m, btn);
+      modesRow.appendChild(btn);
+    }
+    hdrText.appendChild(modesRow);
+    hdrText.appendChild(modeHint);
+    syncModes();
     hdrText.appendChild(h("b", undefined, "What should change?"));
     const hdrPage = h("div", "page");
     hdrText.appendChild(hdrPage);

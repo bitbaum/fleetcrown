@@ -13,6 +13,8 @@ import { ORCHESTRATION_OUTCOME } from "@/lib/orchestration/contract";
 import { isRunProgressFresh, RUN_PROGRESS_FRESH_MS } from "@/lib/run-progress";
 import { FIX_SHIP_STATE, firstSentence, type FixShipping } from "@/lib/feedback/fix-shipping";
 import { autoShipHoldNote, type AutoShipHold } from "@/lib/feedback/auto-ship";
+import { summarizeRunStep } from "@/lib/feedback/run-step";
+import type { RunEventKind } from "@/db/schema/run-events";
 
 export const FEEDBACK_WORK_PHASE = {
   NOT_STARTED: "not_started",
@@ -78,6 +80,18 @@ export type FeedbackWorkView = {
    * there to watch nothing was the first thing that made the loop feel broken.
    */
   watchable?: boolean;
+  /**
+   * There is a live agent PTY to attach — Terminal shows bytes. Distinct from
+   * watchable: Watch itself is offered whenever a run exists (Queued included),
+   * so the captain can see the hop even before a session exists.
+   */
+  terminalReady?: boolean;
+  /** Short human line of the current hop — see run-step.ts. */
+  stepSummary?: string | null;
+  /** Dig-in reason while Queued / Starting — one sentence, not a wall. */
+  queueReason?: string | null;
+  /** pending_commands id when still queued — polls live dispatch status. */
+  commandId?: string | null;
   /** When the agent started on it (delivery, else run start). ISO. */
   since?: string | null;
   /** Last runner heartbeat — the PTY printed something. ISO. */
@@ -111,6 +125,16 @@ export type FeedbackRunSnapshot = {
   summaryDone?: string | null;
   /** payload.fix — the cached fix ledger (see fix-shipping.ts). */
   fix?: FixShipping | null;
+  /** Furthest run_events hop — drives Watch step summary. */
+  latestEventKind?: string | null;
+  /** Open pending command still waiting / claimed. */
+  pendingUnclaimed?: boolean;
+  hostedPending?: boolean;
+  commandId?: string | null;
+  /** One auto-retry already spent — see retry-queued.ts. */
+  feedbackAutoRetriedAt?: string | null;
+  /** Cloud (+ any) builder presence at attach time — offline Queued is not MACHINE. */
+  builderOffline?: boolean;
 };
 
 const STARTING_MS = 90_000;
@@ -135,9 +159,42 @@ export function deriveFeedbackWork(
   run: FeedbackRunSnapshot | null,
   now: number = Date.now(),
 ): FeedbackWorkView {
-  const view = derivePhase(status, run, now);
+  const view = withStep(derivePhase(status, run, now), run);
   return { ...view, waitingOn: waitingOnFor(view) };
 }
+
+function withStep(
+  view: Omit<FeedbackWorkView, "waitingOn">,
+  run: FeedbackRunSnapshot | null,
+): Omit<FeedbackWorkView, "waitingOn"> {
+  if (!run) return view;
+  const step = summarizeRunStep({
+    latestKind: (run.latestEventKind as RunEventKind | null) ?? null,
+    deliveredAt: run.deliveredAt,
+    lastProgressAt: run.lastProgressAt,
+    blocked: run.blocked,
+    pendingUnclaimed: run.pendingUnclaimed,
+    hosted: run.hostedPending === true,
+  });
+  // derivePhase sets watchable only when a PTY exists; that becomes terminalReady.
+  // We then widen watchable so Queued/Stuck still offer the Watch panel.
+  const terminalReady = view.watchable === true;
+  const inFlight =
+    view.phase === FEEDBACK_WORK_PHASE.QUEUED ||
+    view.phase === FEEDBACK_WORK_PHASE.WORKING ||
+    view.phase === FEEDBACK_WORK_PHASE.STUCK;
+  return {
+    ...view,
+    watchable: inFlight || terminalReady ? true : view.watchable,
+    terminalReady,
+    stepSummary: step.summary,
+    queueReason: step.detail,
+    commandId: run.commandId ?? null,
+    // Dig-in gets the queue reason when the row itself stays quiet.
+    diagnostic: view.diagnostic ?? step.detail,
+  };
+}
+
 
 /**
  * Who acts next. Derived in ONE place from the phase and the fix ledger, so
@@ -260,18 +317,32 @@ function derivePhase(
 
   // waiting / idle — the ambiguous zone that previously read as success.
   const ageMs = now - run.startedAt.getTime();
+  // Builder offline is known NOW — do not park under "moving on its own".
+  // Telegram + dig-in; auto-retry cron may cold-start once Hermes/cloud returns.
+  if (!run.deliveredAt && run.builderOffline) {
+    return {
+      phase: FEEDBACK_WORK_PHASE.STUCK,
+      label: "Builder offline",
+      detail: "Connect cloud builder or Retry — Telegram when it stays offline",
+      // watchable filled by withStep (in-flight); no PTY yet → terminalReady false
+      diagnostic:
+        run.hostedPending
+          ? "Cloud builder offline; hosted Hermes was queued but has not claimed yet."
+          : "Cloud builder offline — no agent session will appear until loki-box-runner is online (or Hermes accepts).",
+    };
+  }
   if (!run.deliveredAt && ageMs > STARTING_MS) {
     return {
       phase: FEEDBACK_WORK_PHASE.STUCK,
       label: "Not running",
-      detail: "Retry — Telegram if the builder stays offline",
+      detail: "Retry — or Watch for why it never started",
     };
   }
   if (!run.deliveredAt) {
     return {
       phase: FEEDBACK_WORK_PHASE.QUEUED,
       label: "Queued",
-      // Badge is enough while the machine moves; Telegram interrupts when stuck.
+      // Badge + Watch step; Telegram interrupts when stuck.
       detail: null,
     };
   }

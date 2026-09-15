@@ -38,6 +38,7 @@ import {
   closeRunUndelivered,
   isProjectBusy,
   stampRunDelivered,
+  stampRunCommandId,
 } from "@/db/queries/orchestration-runs";
 import { emitRunEvent } from "@/db/queries/run-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
@@ -635,6 +636,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
 
   const queuedOffline =
     result.mode === "queued" && (result as { runnerConnected?: boolean }).runnerConnected === false;
+
+  if (runId && result.mode === "queued") {
+    const cid = (result as { commandId?: string }).commandId;
+    if (cid) void stampRunCommandId(runId, userId, cid);
+  }
 
   // Producer for the hosted runner: when the local Fleet Runner is offline, a
   // WORK dispatch doesn't have to wait forever — auto-route it to the hosted

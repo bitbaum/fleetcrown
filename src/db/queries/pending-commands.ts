@@ -628,3 +628,48 @@ export async function getRecentFailedCommands(userIds: string[]): Promise<Failed
       };
     });
 }
+
+/** Open pending commands keyed by payload.runId — feedback Watch / Queued truth. */
+export type PendingByRun = {
+  id: string;
+  type: string;
+  claimedAt: Date | null;
+  executedAt: Date | null;
+  createdAt: Date;
+};
+
+export async function getOpenPendingByRunIds(
+  userId: string,
+  runIds: string[],
+): Promise<Map<string, PendingByRun>> {
+  if (runIds.length === 0) return new Map();
+  const wanted = new Set(runIds);
+  // Inbox pages pass a small runId list; filter in memory so we never fight
+  // jsonb→text casting in SQL for a handful of rows.
+  const rows = await db
+    .select({
+      id: pendingCommands.id,
+      type: pendingCommands.type,
+      claimedAt: pendingCommands.claimedAt,
+      executedAt: pendingCommands.executedAt,
+      createdAt: pendingCommands.createdAt,
+      payload: pendingCommands.payload,
+    })
+    .from(pendingCommands)
+    .where(and(eq(pendingCommands.userId, userId), isNull(pendingCommands.executedAt)))
+    .orderBy(desc(pendingCommands.createdAt))
+    .limit(200);
+  const out = new Map<string, PendingByRun>();
+  for (const r of rows) {
+    const runId = (r.payload as { runId?: string } | null)?.runId;
+    if (!runId || !wanted.has(runId) || out.has(runId)) continue;
+    out.set(runId, {
+      id: r.id,
+      type: r.type,
+      claimedAt: r.claimedAt,
+      executedAt: r.executedAt,
+      createdAt: r.createdAt,
+    });
+  }
+  return out;
+}

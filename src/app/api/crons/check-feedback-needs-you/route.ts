@@ -11,18 +11,21 @@ import { type NextRequest, NextResponse } from "next/server";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { logDebug } from "@/db/queries/debug-logs";
 import { syncFeedbackNeedsYou } from "@/lib/feedback/notify-needs-you";
+import { autoRetryStuckFeedbackQueues } from "@/lib/feedback/retry-queued";
 
 export async function GET(req: NextRequest) {
   const denied = requireCronAuth(req);
   if (denied) return denied;
 
+  const retry = await autoRetryStuckFeedbackQueues();
   const result = await syncFeedbackNeedsYou();
-  const didSomething = result.raised > 0 || result.pinged > 0 || result.cleared > 0;
+  const didSomething =
+    retry.retried > 0 || result.raised > 0 || result.pinged > 0 || result.cleared > 0;
   await logDebug({
     source: "crons/check-feedback-needs-you",
     level: didSomething ? "warn" : "info",
     message: `users ${result.users}: raised ${result.raised}, pinged ${result.pinged}, cleared ${result.cleared}`,
-    meta: result,
+    meta: { ...result, retry },
   });
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true, ...result, retry });
 }
