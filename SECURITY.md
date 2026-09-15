@@ -16,7 +16,7 @@ machine. Security work should preserve that boundary.
 This repository is **public**. Do not open a public issue for a suspected
 vulnerability — report it privately, either through GitHub's private
 vulnerability reporting (Security → Report a vulnerability) or by email to
-mao@orangecat.ch, with:
+cato@orangecat.ch, with:
 
 - affected route, component, script, or workflow
 - reproduction steps

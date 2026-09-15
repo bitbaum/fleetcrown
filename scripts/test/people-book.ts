@@ -46,7 +46,7 @@ assert.equal(canImportSocial(ENTITY_TYPE.ROBOT), false);
 assert.equal(canMarket(ENTITY_TYPE.PERSON), false);
 
 assert.equal(normalizeName("José  García"), "jose garcia");
-assert.deepEqual(extractEmails("write me at Mao@OrangeCat.ch please"), ["mao@orangecat.ch"]);
+assert.deepEqual(extractEmails("write me at Cato@OrangeCat.ch please"), ["cato@orangecat.ch"]);
 assert.deepEqual(extractPhones("WhatsApp +41 79 123 45 67"), ["41791234567"]);
 
 const clusters = clusterPeople([

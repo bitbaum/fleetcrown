@@ -92,7 +92,7 @@ export const INVESTORS = {
 
 export const INVESTOR_DETAILS = {
   deck: "Available upon request",
-  contact: "mao@orangecat.ch",
+  contact: "cato@orangecat.ch",
 };
 
 // Roadmap — three honest buckets ("Shipping now" / "Next" / "Research") with

@@ -126,7 +126,7 @@ Questions about this Policy or our data practices:
 
 **Mao Nakamoto** (Data Controller, pending NewCo formation)
 [ADDRESS]
-mao@orangecat.ch
+cato@orangecat.ch
 
 ---
 

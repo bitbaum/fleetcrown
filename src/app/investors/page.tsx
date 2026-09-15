@@ -90,7 +90,7 @@ export default async function InvestorsPage() {
         <div className="mt-7 sm:mt-10">
           {/* The address is the button. On a phone it is also the one tap that
               opens a mail composer, so it gets full width rather than a pill
-              whose label ("mao@orangecat.ch") already fills the row. */}
+              whose label ("cato@orangecat.ch") already fills the row. */}
           <a
             href={`mailto:${INVESTOR_DETAILS.contact}`}
             className="ui-public-cta-lg w-full break-all sm:w-auto"
