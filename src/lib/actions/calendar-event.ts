@@ -159,6 +159,7 @@ Resolve relative/human/German dates against the current time; output absolute va
   let raw: string;
   try {
     raw = await callGroqText(`Current time: ${new Date().toISOString()}\n\nText:\n${text}`, {
+      feature: "calendar-extract",
       systemPrompt: system,
       model: GROQ_FAST_MODEL,
       maxTokens: 300,

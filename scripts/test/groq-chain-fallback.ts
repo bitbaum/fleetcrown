@@ -59,7 +59,7 @@ async function main() {
   // ── 1. Happy path: first link answers, nothing else is tried ───────────────
   {
     stub(() => ({ status: 200, content: "hello" }));
-    const r = await callTextDetailed("p");
+    const r = await callTextDetailed("p", { feature: "test" });
     assert.equal(r.text, "hello");
     assert.equal(calls.length, 1, "a working first link must not trigger further calls");
     assert.equal(r.attempts.length, 0, "no failed attempts on a first-try success");
@@ -76,7 +76,7 @@ async function main() {
       }
       return { status: 200, content: "rescued" };
     });
-    const r = await callTextDetailed("p");
+    const r = await callTextDetailed("p", { feature: "test" });
     assert.equal(r.text, "rescued", "a dead primary model must not be a dead feature");
     assert.ok(r.attempts.length >= 1, "the failed attempt must be recorded, not swallowed");
     assert.match(r.attempts[0].error, /404/, "the recorded attempt keeps the real status");
@@ -96,7 +96,7 @@ async function main() {
         ? { status: 429, text: "Rate limit reached ... on tokens per day (TPD): Limit 100000" }
         : { status: 200, content: "other vendor" },
     );
-    const r = await callTextDetailed("p");
+    const r = await callTextDetailed("p", { feature: "test" });
     assert.equal(r.text, "other vendor");
     assert.notEqual(
       r.provider,
@@ -113,7 +113,7 @@ async function main() {
   {
     let n = 0;
     stub(() => (++n === 1 ? { status: 200, content: "  " } : { status: 200, content: "real" }));
-    const r = await callTextDetailed("p");
+    const r = await callTextDetailed("p", { feature: "test" });
     assert.equal(r.text, "real", "an empty completion must fall through, not be handed back");
     assert.equal(r.attempts.length, 1, "the empty response is recorded as a failed attempt");
   }
@@ -122,7 +122,7 @@ async function main() {
   {
     stub(() => ({ status: 500, text: "boom" }));
     await assert.rejects(
-      () => callTextDetailed("p", { fallback: false }),
+      () => callTextDetailed("p", { feature: "test", fallback: false }),
       /500/,
       "fallback:false must surface the failure rather than substituting a model",
     );
@@ -133,7 +133,7 @@ async function main() {
   {
     stub(() => ({ status: 503, text: "down" }));
     await assert.rejects(
-      () => callGroqText("p"),
+      () => callGroqText("p", { feature: "test" }),
       (err: Error) => {
         assert.match(err.message, /all \d+ model link\(s\) failed/, "must report a CHAIN failure");
         assert.ok(calls.length >= 2, "every usable link must be tried before giving up");
@@ -170,7 +170,7 @@ async function main() {
     };
     try {
       stub(() => ({ status: 200, content: "fine" }));
-      await callTextDetailed("p");
+      await callTextDetailed("p", { feature: "test" });
       assert.equal(
         warnings.length,
         0,
@@ -185,7 +185,7 @@ async function main() {
         }
         return { status: 200, content: "rescued" };
       });
-      await callTextDetailed("p");
+      await callTextDetailed("p", { feature: "test" });
       assert.equal(warnings.length, 1, "a fallback must announce itself exactly once");
       assert.match(warnings[0], /\[ai\] fallback/, "the warning must be greppable in the journal");
       assert.match(warnings[0], /404|model_not_found/, "it must name WHY the primary was skipped");

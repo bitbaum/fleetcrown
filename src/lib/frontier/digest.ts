@@ -107,6 +107,7 @@ export async function generateFrontierDigest(
   let answeredBy: string = GROQ_FAST_MODEL;
   try {
     const completion = await callTextDetailed(buildUserPrompt(candidates), {
+      feature: "frontier-digest",
       systemPrompt: SYSTEM_PROMPT,
       maxTokens: 1100,
       temperature: 0.3,

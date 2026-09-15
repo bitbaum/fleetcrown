@@ -14,6 +14,7 @@
 import { usableVisionChain } from "@/config/vision-models";
 import { HTTP_TIMEOUT_XL_MS } from "@/lib/constants/time";
 import { recordAIHealthFailure, recordAIHealthSuccess } from "@/lib/ai/health";
+import { recordVendorQuota } from "@/lib/ai/record-quota";
 
 export type VisionImage = { mimeType: string; dataBase64: string; name?: string };
 
@@ -75,6 +76,14 @@ export async function analyzeImages(input: {
         body: JSON.stringify({ model, messages, max_tokens: input.maxTokens ?? 900 }),
         signal: AbortSignal.timeout(input.timeoutMs ?? HTTP_TIMEOUT_XL_MS),
       });
+
+      // Vision draws on the SAME vendor pools as chat — a screenshot read
+      // spends Groq tokens that then are not there for a Loki turn. Its own
+      // chain, its own transport, but one budget, so it reports here too.
+      // The vision chain carries no dailyTokens of its own — it spends the same
+      // vendor budget the chat chain declares — so the meter is handed 0 rather
+      // than a second, disagreeing number.
+      recordVendorQuota(res.headers, { provider: { ...provider, dailyTokens: 0 }, model });
 
       if (!res.ok) {
         failures.push(`${model}: HTTP ${res.status}`);

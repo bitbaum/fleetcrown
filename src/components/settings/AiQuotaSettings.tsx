@@ -20,10 +20,14 @@ import type { QuotaRowView } from "@/lib/ai/quota-view";
  * outage.
  */
 
+type SpendRow = { feature: string; tokens: number; calls: number };
+
 type QuotaResponse = {
   summary: string;
   providers: QuotaRowView[];
   configured: { provider: string; model: string }[];
+  spend: SpendRow[];
+  spendTotal: number;
 };
 
 export function AiQuotaSettings() {
@@ -120,6 +124,8 @@ export function AiQuotaSettings() {
             </p>
           )}
 
+          <SpendToday spend={data.spend} total={data.spendTotal} />
+
           <p className="text-xs text-text-muted">
             Counters are recorded from the rate-limit headers on answers already served, so a
             provider only appears once it has served one. Nothing here costs a request to measure.
@@ -188,4 +194,61 @@ function stateLabel(row: QuotaRowView): string {
   if (row.shortfall) return "too low";
   if (row.state === "exhausted") return "spent";
   return row.answers === null ? "available" : `~${row.answers.toLocaleString("en-US")} answers`;
+}
+
+/**
+ * Where today's tokens went.
+ *
+ * The limits above answer "how much room is left". This answers "what used it",
+ * which is the half an operator can act on: a digest that costs more than every
+ * chat turn combined is a thing you can move to a cheaper model or run less
+ * often, and until now it was invisible.
+ *
+ * An EMPTY list is drawn as "nothing recorded yet", never as "nothing spent".
+ * Those are opposite claims, and the ledger genuinely starts empty each UTC day
+ * — same three-state discipline the provider rows already keep.
+ */
+function SpendToday({ spend, total }: { spend: SpendRow[]; total: number }) {
+  if (spend.length === 0) {
+    return (
+      <div className="ui-settings-section">
+        <p className="ui-micro-label">Spent today</p>
+        <p className="text-sm text-text-muted">
+          Nothing recorded yet today — this fills as features call a model.
+        </p>
+      </div>
+    );
+  }
+
+  const widest = Math.max(...spend.map((r) => r.tokens), 1);
+  return (
+    <div className="ui-settings-section">
+      <p className="ui-micro-label">
+        Spent today · {total.toLocaleString("en-US")} tokens across {spend.length} feature
+        {spend.length === 1 ? "" : "s"}
+      </p>
+      <div className="space-y-2">
+        {spend.map((r) => (
+          <div key={r.feature}>
+            <div className="ui-quota-row-head">
+              <span className="ui-quota-provider">{r.feature}</span>
+              <span className="ui-quota-state">
+                {r.tokens.toLocaleString("en-US")} tokens · {r.calls} call
+                {r.calls === 1 ? "" : "s"}
+              </span>
+            </div>
+            {/* Relative to the heaviest feature, not to a quota: these bars
+                compare features with each other, which is the comparison that
+                tells you what to change. */}
+            <div className="ui-quota-track" role="presentation">
+              <span
+                className="ui-quota-fill"
+                style={{ width: `${Math.max(2, Math.round((r.tokens / widest) * 100))}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

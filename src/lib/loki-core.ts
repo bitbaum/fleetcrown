@@ -110,6 +110,7 @@ async function callGroq(
 ): Promise<{ text: string; model: string }> {
   const ask = (prompt: string) =>
     callGroqText(prompt, {
+      feature: "loki-chat-fallback",
       systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
       // A chat turn with the whole fleet in context needs room, and the model
       // must be allowed to think in its HIDDEN channel rather than out loud in

@@ -62,7 +62,11 @@ async function clusterItems(items: FeedbackListItem[], projectName: string): Pro
     ...numbered,
   ].join("\n");
 
-  const raw = await callGroqText(prompt, { maxTokens: 500, temperature: 0.2 });
+  const raw = await callGroqText(prompt, {
+    feature: "feedback-digest",
+    maxTokens: 500,
+    temperature: 0.2,
+  });
   const parsed = JSON.parse(extractJson(raw)) as { themes?: GroqTheme[] };
   return (parsed.themes ?? [])
     .filter(
