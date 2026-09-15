@@ -15,6 +15,7 @@ import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { rememberFleetProject } from "@/lib/fleet-context";
 import { resolveTabAttachment, type PtyGeometry } from "@/lib/terminal-viewport";
 import type { BuilderChannel } from "@/lib/event-stream-types";
+import { resolveTerminalSource } from "@/lib/terminal-deep-link";
 import {
   TERMINAL_MODE_STORAGE_KEY,
   type TerminalInputMode,
@@ -156,7 +157,25 @@ export function TerminalSurface({
   const [pickedSource, setPickedSource] = useState<TerminalSource | null>(null);
 
   // Auto-switch preparation: poll both sources to see which has the requested tab
-  const desiredSourceFromUrl = initialSource ?? mode.source;
+  // A deep link that names a PROJECT can never mean the shell source.
+  //
+  // The shell is a plain Loki-owned bash PTY with no concept of project tabs —
+  // `stripTabs` is not even passed when source === "shell". But the source here
+  // fell back to `mode.source`, which is REMEMBERED IN LOCALSTORAGE, so anyone
+  // who had once picked Shell got sent to a bash prompt by every "Watch" and
+  // "Open terminal" link on Control. Measured 2026-09-13: dispatching to
+  // truthseeker-tmp, clicking the "Watch" link on the resulting Queued banner
+  // landed on an unrelated bash session showing a week-old panic message. The
+  // agent was running the whole time; the page just opened somewhere else.
+  //
+  // An EXPLICIT ?source=shell is still honoured — that is the reader asking.
+  // Only the remembered value is overridden, and only when a project was named.
+  const desiredSourceFromUrl = resolveTerminalSource({
+    fromUrl: initialSource,
+    remembered: mode.source,
+    projectRequested: Boolean(initialTab),
+    available: sources,
+  });
   const primarySource: TerminalSource = sources.includes(desiredSourceFromUrl)
     ? desiredSourceFromUrl
     : "cloud";

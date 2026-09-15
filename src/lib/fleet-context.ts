@@ -4,7 +4,16 @@ export const FLEET_PROJECT_EVENT = "loki:project-context";
 export type FleetWorkspaceSurfaceId = "profile" | "chat" | "control" | "terminal";
 export type FleetSurfaceId = FleetWorkspaceSurfaceId | "activity";
 
-export function fleetSurfaceHref(surface: FleetSurfaceId, project: string | null): string {
+/** Which terminal source a watch link should open. Callers that know where the
+ *  agent runs should say so; omitting it leaves the terminal to resolve it. */
+export type FleetTerminalSource = "cloud" | "machine" | "shell";
+
+export function fleetSurfaceHref(
+  surface: FleetSurfaceId,
+  project: string | null,
+  /** Only meaningful for the terminal surface. */
+  source?: FleetTerminalSource,
+): string {
   const value = project?.trim();
   if (!value) {
     if (surface === "profile") return "/projects";
@@ -19,12 +28,15 @@ export function fleetSurfaceHref(surface: FleetSurfaceId, project: string | null
   if (surface === "chat") return `/loki?project=${encoded}`;
   if (surface === "control") return `/control?focus=${encoded}`;
   if (surface === "activity") return `/activity?project=${encoded}`;
-  return `/terminal?project=${encoded}`;
+  return source ? `/terminal?project=${encoded}&source=${source}` : `/terminal?project=${encoded}`;
 }
 
 /** Where to watch a queued inject: Control for state, Activity for the ledger,
  *  Terminal only once a session is actually running. */
-export function injectWatchUrls(projectKey: string): {
+export function injectWatchUrls(
+  projectKey: string,
+  source?: FleetTerminalSource,
+): {
   watchUrl: string;
   activityUrl: string;
   terminalUrl: string;
@@ -32,7 +44,7 @@ export function injectWatchUrls(projectKey: string): {
   return {
     watchUrl: fleetSurfaceHref("control", projectKey),
     activityUrl: fleetSurfaceHref("activity", projectKey),
-    terminalUrl: fleetSurfaceHref("terminal", projectKey),
+    terminalUrl: fleetSurfaceHref("terminal", projectKey, source),
   };
 }
 
